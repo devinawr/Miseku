@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sedang offline · Miseku</title>
+    <style>
+        :root { --ms-500:#7a9bcf; --ms-600:#6483b4; --ms-900:#2a3a52; --ms-50:#f6f9ff; --ms-200:#ccdbfa; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+            background: var(--ms-50); color: var(--ms-900);
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+        .card {
+            max-width: 420px; text-align: center; background: #fff; border: 1px solid var(--ms-200);
+            border-radius: 20px; padding: 40px 28px; box-shadow: 0 18px 40px -16px rgba(42,58,82,.28);
+        }
+        img { width: 88px; height: 88px; }
+        h1 { margin: 20px 0 8px; font-size: 20px; }
+        p { margin: 0; color: var(--ms-600); font-size: 14px; line-height: 1.6; }
+        button {
+            margin-top: 24px; border: 0; cursor: pointer; background: var(--ms-500); color: #fff;
+            font-size: 14px; font-weight: 600; padding: 12px 22px; border-radius: 12px;
+        }
+        button:hover { background: var(--ms-600); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="/img/logo.png" alt="Miseku">
+        <h1>Kamu sedang offline</h1>
+        <p>Halaman yang pernah dibuka masih bisa diakses dari cache. Sambungkan internet untuk memuat katalog terbaru.</p>
+        <button onclick="location.reload()">Coba lagi</button>
+    </div>
+</body>
+</html>

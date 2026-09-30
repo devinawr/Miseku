@@ -1,0 +1,112 @@
+@import 'tailwindcss';
+
+@source '../**/*.blade.php';
+@source '../../app/Livewire/**/*.php';
+
+/* ================================================================
+   Palet Miseku — diambil langsung dari logo (biru periwinkle lembut)
+   ================================================================ */
+@theme {
+    --color-miseku-50: #f6f9ff;
+    --color-miseku-100: #edf2fb;
+    --color-miseku-200: #ccdbfa;
+    --color-miseku-300: #adc3f5;
+    --color-miseku-400: #8faae4;
+    --color-miseku-500: #7a9bcf; /* warna utama: outline & wordmark logo */
+    --color-miseku-600: #6483b4;
+    --color-miseku-700: #4f6a93;
+    --color-miseku-800: #3b506f;
+    --color-miseku-900: #2a3a52; /* warna teks utama */
+
+    --color-sakura-400: #f0a9bd; /* aksen hangat untuk badge pre-order */
+    --color-sakura-500: #e88ca4;
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+
+    --radius-card: 1.25rem;
+
+    --shadow-soft: 0 1px 2px rgb(42 58 82 / 0.04), 0 8px 24px -12px rgb(42 58 82 / 0.18);
+    --shadow-lift: 0 2px 4px rgb(42 58 82 / 0.06), 0 18px 40px -16px rgb(42 58 82 / 0.28);
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-miseku-50 text-miseku-900 antialiased;
+    }
+
+    /* Wajib untuk x-cloak Alpine: sembunyikan elemen sebelum Alpine siap */
+    [x-cloak] {
+        display: none !important;
+    }
+
+    /* Scrollbar senada palet */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-miseku-100;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-miseku-300 rounded-full;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-miseku-400;
+    }
+}
+
+/* ================================================================
+   Komponen kecil yang dipakai berulang
+   ================================================================ */
+@layer components {
+    .ms-card {
+        @apply bg-white border border-miseku-200/70 rounded-[var(--radius-card)] shadow-[var(--shadow-soft)];
+    }
+
+    .ms-input {
+        @apply w-full rounded-xl border border-miseku-200 bg-white px-4 py-2.5 text-sm text-miseku-900
+               placeholder:text-miseku-400 focus:border-miseku-400 focus:ring-4 focus:ring-miseku-200/60
+               focus:outline-none transition;
+    }
+
+    .ms-select {
+        @apply w-full appearance-none rounded-xl border border-miseku-200 bg-white px-4 py-2.5 pr-10 text-sm
+               font-medium text-miseku-800 focus:border-miseku-400 focus:ring-4 focus:ring-miseku-200/60
+               focus:outline-none transition;
+    }
+
+    .ms-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-miseku-500 px-4 py-2.5 text-sm
+               font-semibold text-white transition hover:bg-miseku-600 active:bg-miseku-700
+               focus:outline-none focus-visible:ring-4 focus-visible:ring-miseku-200
+               disabled:cursor-not-allowed disabled:bg-miseku-200 disabled:text-miseku-400;
+    }
+
+    .ms-btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-miseku-200 bg-white
+               px-4 py-2.5 text-sm font-semibold text-miseku-700 transition hover:bg-miseku-100
+               focus:outline-none focus-visible:ring-4 focus-visible:ring-miseku-200;
+    }
+
+    .ms-chip {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+    }
+
+    .ms-tab {
+        @apply relative px-4 py-3 text-sm font-semibold text-miseku-500 transition hover:text-miseku-700;
+    }
+
+    .ms-tab-active {
+        @apply text-miseku-800;
+    }
+
+    /* Placeholder saat Livewire sedang memuat ulang grid */
+    .ms-skeleton {
+        @apply animate-pulse rounded-xl bg-miseku-100;
+    }
+}
