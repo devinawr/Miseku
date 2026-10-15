@@ -11,13 +11,14 @@ use Symfony\Component\HttpFoundation\Response;
  * Halaman pembeli (beranda, katalog, keranjang, pesanan saya, custom, voting, dll.)
  * diarahkan ke Panel admin. Yang tetap boleh: semua /admin, akun (profil & sandi),
  * chat, notifikasi, serta halaman yang dibuka dari panel untuk moderasi
- * (detail produk, halaman toko, detail pesanan, topik komunitas).
+ * (detail produk, halaman toko, detail pesanan, komunitas fandom & topiknya).
  */
 class KeepAdminInPanel
 {
     private const ALLOWED = [
         'admin.*', 'account', 'chat', 'notifications', 'logout',
-        'product.detail', 'artist.shop', 'orders.show', 'community.topic',
+        'product.detail', 'artist.shop', 'orders.show',
+        'community', 'community.fandom', 'community.topic',
         'livewire.*', 'midtrans.*',
     ];
 

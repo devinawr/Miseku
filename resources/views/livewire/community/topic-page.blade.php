@@ -22,7 +22,9 @@
         @endforeach
     </div>
 
-    @if ($role)
+    @if (auth()->user()?->isAdmin())
+        <p class="ms-card mt-6 p-4 text-sm text-brand-800 bg-brand-50"><b>Mode pantau admin.</b> Admin bisa menghapus topik atau pesan yang melanggar, tapi tidak ikut membalas diskusi.</p>
+    @elseif ($canPost)
         <form wire:submit="post" class="ms-card mt-6 space-y-3 p-5">
             @if ($replyTo)
                 <p class="flex items-center gap-2 text-sm font-bold text-brand-700">Membalas pesan <button type="button" wire:click="$set('replyTo', null)"><x-icon name="x" class="h-4 w-4" /></button></p>

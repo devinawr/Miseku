@@ -23,6 +23,8 @@ class Index extends Component
 
             return;
         }
+        // admin hanya memantau, tidak menjadi anggota komunitas
+        abort_if(Auth::user()->isAdmin(), 403);
 
         $row = FandomMember::where('fandom_id', $fandomId)->where('user_id', Auth::id())->first();
         if ($row) {

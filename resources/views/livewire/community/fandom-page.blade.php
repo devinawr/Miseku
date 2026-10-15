@@ -1,10 +1,16 @@
 <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
     <x-page-title :title="'Komunitas ' . $fandom->fandom_name" :subtitle="$members . ' anggota · ' . $topics->count() . ' topik'">
         <a href="{{ route('catalog', ['fandom' => $fandom->id]) }}" wire:navigate class="ms-btn-ghost">Merch {{ $fandom->fandom_name }}</a>
-        @unless ($isMember)<button type="button" wire:click="join" class="ms-btn-primary">Gabung komunitas</button>@endunless
+        @unless ($isMember || auth()->user()?->isAdmin())<button type="button" wire:click="join" class="ms-btn-primary">Gabung komunitas</button>@endunless
     </x-page-title>
 
-    @if ($isMember)
+    @if (auth()->user()?->isAdmin())
+        <div class="ms-card mb-6 flex flex-wrap items-center gap-3 border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
+            <x-icon name="shield" class="h-5 w-5 shrink-0" />
+            <p class="flex-1"><b>Mode pantau admin.</b> Buka topik untuk memeriksa isi diskusi dan menghapus topik atau pesan yang melanggar.</p>
+            <a href="{{ route('admin.dashboard') }}" wire:navigate class="ms-btn-ghost">Kembali ke panel admin</a>
+        </div>
+    @elseif ($isMember)
         <form wire:submit="createTopic" class="ms-card mb-6 space-y-3 p-5" x-data="{ open: false }">
             <button type="button" class="font-extrabold text-ink-900" @click="open = !open">+ Buat topik baru</button>
             <div x-show="open" x-cloak class="space-y-3">

@@ -49,9 +49,15 @@ class TopicPage extends Component
         $this->replyTo = $id;
     }
 
+    /** Admin memantau & memoderasi (hapus), tidak ikut berdiskusi. */
+    private function canPost(): bool
+    {
+        return (bool) $this->role() && ! Auth::user()->isAdmin();
+    }
+
     public function post(): void
     {
-        abort_unless($this->role(), 403);
+        abort_unless($this->canPost(), 403);
         $this->validate([
             'body'          => (count($this->photos) ? 'nullable' : 'required') . '|string|max:3000',
             'attachProduct' => 'nullable|exists:product,id',
@@ -101,6 +107,7 @@ class TopicPage extends Component
 
         return view('livewire.community.topic-page', [
             'role'     => $this->role(),
+            'canPost'  => $this->canPost(),
             'messages' => TopicMessage::where('discussion_topic_id', $topic->id)->whereNull('parent_message_id')
                 ->with(['user', 'images', 'attachedProduct.primaryImage', 'attachedArtist', 'replies' => fn ($q) => $q->orderBy('sent_at')->with(['user', 'images', 'attachedProduct.primaryImage', 'attachedArtist'])])
                 ->orderBy('sent_at')->get(),

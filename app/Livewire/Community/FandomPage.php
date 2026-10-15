@@ -43,6 +43,8 @@ class FandomPage extends Component
 
             return;
         }
+        // admin hanya memantau, tidak menjadi anggota komunitas
+        abort_if(Auth::user()->isAdmin(), 403);
         FandomMember::firstOrCreate(['fandom_id' => $this->fandom->id, 'user_id' => Auth::id()], ['role' => 'member', 'joined_at' => now()]);
         $this->dispatch('toast', message: 'Bergabung dengan komunitas ' . $this->fandom->fandom_name . '!');
     }

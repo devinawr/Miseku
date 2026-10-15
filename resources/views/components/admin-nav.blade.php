@@ -9,6 +9,7 @@
         ['admin.withdrawals', 'Penarikan dana', 'wallet'],
         ['admin.events', 'Event', 'calendar'],
         ['admin.themes', 'Tema fandom', 'palette'],
+        ['community', 'Komunitas', 'chat'],
         ['admin.settings', 'Pengaturan & otomasi', 'settings'],
     ];
 @endphp

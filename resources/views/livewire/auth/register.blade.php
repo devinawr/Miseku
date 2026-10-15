@@ -17,8 +17,8 @@
         </div>
 
         <div>
-            <label for="name" class="ms-label">Nama lengkap</label>
-            <input id="name" type="text" wire:model.blur="name" autocomplete="name" placeholder="Devina Wongkar"
+            <label for="name" class="ms-label">Nama</label>
+            <input id="name" type="text" wire:model.blur="name" autocomplete="name" placeholder="Masukkan nama akun"
                    @class(['ms-input', '!border-red-300' => $errors->has('name')])>
             @error('name') <p class="ms-error">{{ $message }}</p> @enderror
         </div>
