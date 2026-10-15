@@ -5,7 +5,7 @@
  * - Halaman HTML -> network-first dengan fallback halaman offline.
  * - Request Livewire (/livewire/update) sengaja TIDAK di-cache karena selalu butuh data terbaru.
  */
-const CACHE = 'miseku-v1';
+const CACHE = 'miseku-v3'; // naikkan versi tiap ganti logo/ikon supaya cache lama dibuang
 
 const PRECACHE = [
     '/offline.html',
@@ -13,6 +13,7 @@ const PRECACHE = [
     '/img/logo.png',
     '/img/icons/icon-192.png',
     '/img/icons/icon-512.png',
+    '/img/icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,8 +44,10 @@ self.addEventListener('fetch', (event) => {
     if (isAsset) {
         event.respondWith(
             caches.match(request).then((hit) => hit || fetch(request).then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE).then((cache) => cache.put(request, copy));
+                if (response.ok) {
+                    const copy = response.clone();
+                    caches.open(CACHE).then((cache) => cache.put(request, copy));
+                }
                 return response;
             }).catch(() => hit))
         );
@@ -54,8 +57,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(request)
             .then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE).then((cache) => cache.put(request, copy));
+                // hanya simpan halaman yang berhasil (bukan redirect/error)
+                if (response.ok && response.type === 'basic') {
+                    const copy = response.clone();
+                    caches.open(CACHE).then((cache) => cache.put(request, copy));
+                }
                 return response;
             })
             .catch(() => caches.match(request).then((hit) => hit || caches.match('/offline.html')))

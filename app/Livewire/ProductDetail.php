@@ -4,17 +4,22 @@ namespace App\Livewire;
 
 use App\Models\Product;
 use App\Models\ProductView;
+use App\Services\CartService;
+use App\Services\ContentBasedRecommender;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
- * Modul 2 — Halaman Detail Produk.
+ * Halaman Detail Produk.
  *
- * Galeri gambar (state gambar aktif dipegang Alpine.js karena murni tampilan),
- * info artis, harga + info batch PO, badge status, pengatur jumlah, dan
- * section ulasan produk lengkap dengan sebaran bintang.
+ * - Mencatat product_view (sinyal CBF "produk dilihat").
+ * - Tambah ke keranjang lewat CartService (aturan stok / batch PO).
+ * - "Beli sekarang" langsung ke checkout (tanpa lewat keranjang) + pilihan skema DP / lunas.
+ * - Tombol "Chat artis" membuka percakapan dengan konteks produk.
+ * - "Produk serupa" dihitung item-to-item dengan weighted cosine similarity.
  */
 #[Layout('components.layouts.app')]
 class ProductDetail extends Component
@@ -23,9 +28,12 @@ class ProductDetail extends Component
 
     public int $quantity = 1;
 
+    /** Skema bayar PO: 'full' (lunas) atau 'dp' (hanya bila batch mengizinkan DP). */
+    public string $scheme = 'full';
+
     public function mount(Product $product): void
     {
-        abort_unless($product->product_status === 'active', 404);
+        abort_unless($product->isPubliclyVisible(), 404);
 
         $this->product = $product->load([
             'images',
@@ -35,17 +43,20 @@ class ProductDetail extends Component
             'merchandiseType',
         ]);
 
+        $this->scheme = $this->product->openBatch?->is_dp ? 'dp' : 'full';
+
         $this->recordView();
     }
 
-    /**
-     * Simpan jejak "produk pernah dilihat" — bahan vektor rekomendasi (BPMN 8).
-     * Hanya untuk user yang sudah login, dan tidak dicatat berulang dalam 1 jam
-     * agar refresh halaman tidak menggandakan data.
-     */
+    public function updatedScheme(): void
+    {
+        $this->scheme = $this->scheme === 'dp' && $this->product->openBatch?->is_dp ? 'dp' : 'full';
+    }
+
+    /** Jejak "produk dilihat" (tidak dicatat ulang dalam 1 jam). */
     private function recordView(): void
     {
-        if (! Auth::check()) {
+        if (! Auth::check() || $this->isOwnProduct()) {
             return;
         }
 
@@ -64,11 +75,26 @@ class ProductDetail extends Component
         }
     }
 
-    /** Batas kuantitas: stok untuk ready stock, longgar untuk pre-order. */
+    public function isOwnProduct(): bool
+    {
+        return Auth::check() && $this->product->artistProfile?->user_id === Auth::id();
+    }
+
+    #[Computed]
+    public function maxQuantity(): int
+    {
+        return max(1, app(CartService::class)->maxQuantity($this->product));
+    }
+
+    #[Computed]
+    public function unavailableReason(): ?string
+    {
+        return app(CartService::class)->unavailableReason($this->product);
+    }
+
     public function updatedQuantity(): void
     {
-        $max = $this->product->is_pre_order ? 99 : max(1, (int) $this->product->stock);
-        $this->quantity = max(1, min($max, (int) $this->quantity));
+        $this->quantity = max(1, min($this->maxQuantity, (int) $this->quantity));
     }
 
     public function increment(): void
@@ -83,23 +109,72 @@ class ProductDetail extends Component
         $this->updatedQuantity();
     }
 
-    /**
-     * Tahap bimbingan: modul keranjang & checkout belum dikerjakan.
-     * Yang sudah berfungsi adalah penjagaan aksesnya — pengunjung yang belum
-     * login diarahkan ke halaman masuk, dan dikembalikan ke sini setelahnya.
-     */
-    public function addToCart()
+    public function addToCart(bool $buyNow = false)
     {
-        if (! Auth::check()) {
-            session()->put('url.intended', url()->current());
-            session()->flash('status', 'Masuk dulu untuk melanjutkan pemesanan.');
-
-            return $this->redirect(route('login'), navigate: true);
+        if ($buyNow) {
+            return $this->buyNow();
         }
 
-        $this->dispatch('toast', message: 'Modul keranjang belum aktif — tampilan detail produk sudah siap.');
+        if (! Auth::check()) {
+            return $this->toLogin('Masuk dulu untuk menambahkan ke keranjang.');
+        }
+
+        try {
+            $item = app(CartService::class)->add(Auth::user(), $this->product, $this->quantity);
+        } catch (ValidationException $e) {
+            $this->dispatch('toast', message: $e->errors()['cart'][0] ?? 'Gagal menambahkan.', tone: 'error');
+
+            return null;
+        }
+
+        // skema PO yang dipilih dibawa ke checkout dari keranjang
+        session(["cart_scheme.{$this->product->id}" => $this->scheme]);
+
+        $this->dispatch('cart-updated');
+        $this->dispatch('toast', message: "{$this->quantity} pcs masuk keranjang.");
+        $this->quantity = 1;
 
         return null;
+    }
+
+    /** Beli langsung: tidak masuk keranjang, langsung ke halaman checkout. */
+    public function buyNow()
+    {
+        if (! Auth::check()) {
+            return $this->toLogin('Masuk dulu untuk membeli.');
+        }
+
+        if ($this->isOwnProduct()) {
+            $this->dispatch('toast', message: 'Tidak bisa membeli produk dari tokomu sendiri.', tone: 'error');
+
+            return null;
+        }
+
+        $cart = app(CartService::class);
+        $this->product->load('openBatch');
+        if ($reason = $cart->unavailableReason($this->product)) {
+            $this->dispatch('toast', message: $reason, tone: 'error');
+
+            return null;
+        }
+
+        $qty = max(1, min($cart->maxQuantity($this->product), (int) $this->quantity));
+        $this->updatedScheme();
+
+        session([
+            'checkout_lines'    => [['product_id' => $this->product->id, 'quantity' => $qty, 'scheme' => $this->scheme]],
+            'checkout_cart_ids' => [],
+        ]);
+
+        return $this->redirect(route('checkout'), navigate: true);
+    }
+
+    private function toLogin(string $message)
+    {
+        session()->put('url.intended', url()->route('product.detail', $this->product));
+        session()->flash('status', $message);
+
+        return $this->redirect(route('login'), navigate: true);
     }
 
     #[Computed]
@@ -112,7 +187,6 @@ class ProductDetail extends Component
             ->get();
     }
 
-    /** Sebaran bintang 5→1 untuk bar ulasan. */
     #[Computed]
     public function ratingBreakdown(): array
     {
@@ -131,18 +205,30 @@ class ProductDetail extends Component
             ->all();
     }
 
-    /** Karya lain dari toko yang sama. */
     #[Computed]
     public function moreFromArtist()
     {
         return Product::query()
             ->visible()
-            ->with(['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType'])
+            ->with(['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType', 'character.fandom'])
             ->where('artist_profile_id', $this->product->artist_profile_id)
             ->whereKeyNot($this->product->id)
             ->latest('created_at')
             ->take(4)
             ->get();
+    }
+
+    /** Produk serupa (CBF item-to-item), tidak termasuk produk toko yang sama agar variatif. */
+    #[Computed]
+    public function similar()
+    {
+        $exclude = $this->moreFromArtist->pluck('id');
+
+        return app(ContentBasedRecommender::class)
+            ->similarTo($this->product, 12)
+            ->reject(fn ($p) => $exclude->contains($p->id))
+            ->take(4)
+            ->values();
     }
 
     public function render()

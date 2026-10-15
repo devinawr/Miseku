@@ -23,4 +23,10 @@ class FandomCharacter extends Model
     {
         return $q->where('status', 'active');
     }
+
+    /** User (biasanya artis) yang mengusulkan; NULL = dibuat admin/seed. */
+    public function proposer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'proposed_by');
+    }
 }

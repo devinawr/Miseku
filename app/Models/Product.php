@@ -81,9 +81,44 @@ class Product extends Model
     // ---------- Scope ----------
 
     /** Hanya produk yang boleh tampil di katalog publik. */
+    /**
+     * Produk yang boleh tampil ke pembeli: status active DAN fandom, karakter,
+     * serta jenis merch-nya sudah disetujui admin (status master = active).
+     * Produk yang memakai usulan baru (pending) tetap tersembunyi sampai disetujui.
+     */
     public function scopeVisible(Builder $q): Builder
     {
-        return $q->where('product_status', 'active');
+        return $q->where('product_status', 'active')
+            ->whereHas('character', fn (Builder $c) => $c->where('status', 'active')
+                ->whereHas('fandom', fn (Builder $f) => $f->where('status', 'active')))
+            ->whereHas('merchandiseType', fn (Builder $t) => $t->where('status', 'active'));
+    }
+
+    /**
+     * Master (fandom/karakter/jenis) produk ini yang belum disetujui admin.
+     * Hasil: [['label' => 'Fandom', 'name' => '...', 'status' => 'pending|rejected'], ...]
+     */
+    public function unapprovedMasters(): array
+    {
+        $this->loadMissing(['character.fandom', 'merchandiseType']);
+
+        return collect([
+            ['label' => 'Fandom', 'model' => $this->character?->fandom, 'field' => 'fandom_name'],
+            ['label' => 'Karakter', 'model' => $this->character, 'field' => 'character_name'],
+            ['label' => 'Jenis', 'model' => $this->merchandiseType, 'field' => 'type_name'],
+        ])->filter(fn ($m) => $m['model'] && $m['model']->status !== 'active')
+            ->map(fn ($m) => ['label' => $m['label'], 'name' => $m['model']->{$m['field']}, 'status' => $m['model']->status])
+            ->values()->all();
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return static::query()->visible()->whereKey($this->id)->exists();
+    }
+
+    public function scopeOwnedBy(Builder $q, int $artistProfileId): Builder
+    {
+        return $q->where('artist_profile_id', $artistProfileId)->where('product_status', '!=', 'deleted');
     }
 
     public function scopeSearch(Builder $q, ?string $term): Builder
@@ -120,6 +155,11 @@ class Product extends Model
     public function getCoverUrlAttribute(): string
     {
         return $this->primaryImage?->url ?: '/img/dummy/merch-1.jpg';
+    }
+
+    public function getFandomNameAttribute(): ?string
+    {
+        return $this->character?->fandom?->fandom_name;
     }
 
     public function getIsSoldOutAttribute(): bool

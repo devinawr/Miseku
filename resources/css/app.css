@@ -1,33 +1,68 @@
 @import 'tailwindcss';
 
 @source '../**/*.blade.php';
-@source '../../app/Livewire/**/*.php';
+@source '../../app/**/*.php';
 
-/* ================================================================
-   Palet Miseku — diambil langsung dari logo (biru periwinkle lembut)
-   ================================================================ */
+/* =====================================================================
+   Design token Miseku
+   ---------------------------------------------------------------------
+   brand  = warna utama   (ungu elektrik #7C3AED)
+   accent = warna gradasi (magenta #DB2777)
+   pop    = sorotan kecil (cyan #06B6D4)
+   ink    = netral untuk teks/garis
+   ===================================================================== */
 @theme {
-    --color-miseku-50: #f6f9ff;
-    --color-miseku-100: #edf2fb;
-    --color-miseku-200: #ccdbfa;
-    --color-miseku-300: #adc3f5;
-    --color-miseku-400: #8faae4;
-    --color-miseku-500: #7a9bcf; /* warna utama: outline & wordmark logo */
-    --color-miseku-600: #6483b4;
-    --color-miseku-700: #4f6a93;
-    --color-miseku-800: #3b506f;
-    --color-miseku-900: #2a3a52; /* warna teks utama */
+    --color-brand-50: #f7f3fe;
+    --color-brand-100: #ede3fc;
+    --color-brand-200: #dac8fa;
+    --color-brand-300: #c0a0f6;
+    --color-brand-400: #a171f2;
+    --color-brand-500: #7c3aed;
+    --color-brand-600: #6b32cc;
+    --color-brand-700: #5729a6;
+    --color-brand-800: #431f80;
+    --color-brand-900: #32175f;
 
-    --color-sakura-400: #f0a9bd; /* aksen hangat untuk badge pre-order */
-    --color-sakura-500: #e88ca4;
+    --color-accent-50: #fdf2f7;
+    --color-accent-100: #fae1ec;
+    --color-accent-200: #f5c3d9;
+    --color-accent-300: #ee97be;
+    --color-accent-400: #e5639d;
+    --color-accent-500: #db2777;
+    --color-accent-600: #bc2266;
+    --color-accent-700: #991b53;
+    --color-accent-800: #761540;
+    --color-accent-900: #581030;
 
-    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-        'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --color-pop-50: #f0fbfc;
+    --color-pop-100: #dcf5f9;
+    --color-pop-200: #b9ebf3;
+    --color-pop-300: #87dcea;
+    --color-pop-400: #4ccae0;
+    --color-pop-500: #06b6d4;
+    --color-pop-600: #059db6;
+    --color-pop-700: #047f94;
+    --color-pop-800: #036272;
+    --color-pop-900: #024955;
+
+    --color-ink-50: #f8f7fb;
+    --color-ink-100: #f0eef6;
+    --color-ink-200: #e2dfec;
+    --color-ink-300: #c9c4d8;
+    --color-ink-400: #9d97b3;
+    --color-ink-500: #736d8c;
+    --color-ink-600: #57516f;
+    --color-ink-700: #413c57;
+    --color-ink-800: #2b2740;
+    --color-ink-900: #1a1628;
+
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 
     --radius-card: 1.25rem;
 
-    --shadow-soft: 0 1px 2px rgb(42 58 82 / 0.04), 0 8px 24px -12px rgb(42 58 82 / 0.18);
-    --shadow-lift: 0 2px 4px rgb(42 58 82 / 0.06), 0 18px 40px -16px rgb(42 58 82 / 0.28);
+    --shadow-soft: 0 1px 2px rgb(26 22 40 / 0.04), 0 10px 30px -14px rgb(26 22 40 / 0.18);
+    --shadow-lift: 0 2px 6px rgb(26 22 40 / 0.06), 0 24px 48px -18px rgb(26 22 40 / 0.32);
+    --shadow-glow: 0 12px 32px -10px color-mix(in srgb, var(--color-brand-500) 55%, transparent);
 }
 
 @layer base {
@@ -36,77 +71,344 @@
     }
 
     body {
-        @apply bg-miseku-50 text-miseku-900 antialiased;
+        @apply bg-ink-50 text-ink-900 antialiased;
     }
 
-    /* Wajib untuk x-cloak Alpine: sembunyikan elemen sebelum Alpine siap */
     [x-cloak] {
         display: none !important;
     }
 
-    /* Scrollbar senada palet */
+    ::selection {
+        @apply bg-brand-200 text-brand-900;
+    }
+
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
     }
     ::-webkit-scrollbar-track {
-        @apply bg-miseku-100;
+        @apply bg-ink-100;
     }
     ::-webkit-scrollbar-thumb {
-        @apply bg-miseku-300 rounded-full;
+        @apply rounded-full bg-ink-300;
     }
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-miseku-400;
+        @apply bg-brand-400;
     }
 }
 
-/* ================================================================
-   Komponen kecil yang dipakai berulang
-   ================================================================ */
 @layer components {
+    /* ---------- permukaan ---------- */
     .ms-card {
-        @apply bg-white border border-miseku-200/70 rounded-[var(--radius-card)] shadow-[var(--shadow-soft)];
+        @apply rounded-[var(--radius-card)] border border-ink-200/70 bg-white shadow-[var(--shadow-soft)];
+    }
+
+    /* gradasi utama Miseku (tombol tetap 1 warna — lihat .ms-btn-primary) */
+    .ms-gradient {
+        background-image: linear-gradient(120deg, var(--color-brand-600) 0%, var(--color-brand-500) 35%, var(--color-accent-500) 100%);
+    }
+
+    /* Khusus banner: gradasi ungu → pink */
+    .ms-banner {
+        background-image: linear-gradient(120deg, var(--color-brand-600) 0%, var(--color-brand-500) 35%, var(--color-accent-500) 100%);
+    }
+
+    .ms-gradient-soft {
+        background-image: linear-gradient(120deg, var(--color-brand-100) 0%, var(--color-accent-100) 100%);
+    }
+
+    .ms-gradient-text {
+        @apply bg-clip-text text-transparent;
+        background-image: linear-gradient(100deg, var(--color-brand-600), var(--color-accent-500));
+    }
+
+    /* Tulisan "Miseku" di samping logo — mengikuti warna logo (gradasi ungu → magenta) */
+    .ms-logo-text {
+        @apply bg-clip-text text-transparent;
+        background-image: linear-gradient(100deg, var(--color-brand-600), var(--color-accent-500));
+    }
+
+    /* pola titik halus untuk banner */
+    .ms-dots {
+        background-image: radial-gradient(rgb(255 255 255 / 0.18) 1.2px, transparent 1.2px);
+        background-size: 18px 18px;
+    }
+
+    /* ---------- form ---------- */
+    .ms-label {
+        @apply mb-1.5 block text-sm font-semibold text-ink-800;
+    }
+
+    .ms-hint {
+        @apply mt-1 text-xs text-ink-500;
+    }
+
+    .ms-error {
+        @apply mt-1.5 text-xs font-medium text-red-600;
     }
 
     .ms-input {
-        @apply w-full rounded-xl border border-miseku-200 bg-white px-4 py-2.5 text-sm text-miseku-900
-               placeholder:text-miseku-400 focus:border-miseku-400 focus:ring-4 focus:ring-miseku-200/60
-               focus:outline-none transition;
+        @apply w-full rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-900
+               placeholder:text-ink-400 transition
+               focus:border-brand-400 focus:ring-4 focus:ring-brand-200/60 focus:outline-none;
     }
 
     .ms-select {
-        @apply w-full appearance-none rounded-xl border border-miseku-200 bg-white px-4 py-2.5 pr-10 text-sm
-               font-medium text-miseku-800 focus:border-miseku-400 focus:ring-4 focus:ring-miseku-200/60
-               focus:outline-none transition;
+        @apply w-full appearance-none rounded-xl border border-ink-200 bg-white py-2.5 pr-10 pl-4 text-sm
+               font-medium text-ink-800 transition
+               focus:border-brand-400 focus:ring-4 focus:ring-brand-200/60 focus:outline-none;
+    }
+
+    .ms-check {
+        @apply h-4.5 w-4.5 rounded-md border-ink-300 accent-brand-600;
+    }
+
+    /* ---------- tombol ---------- */
+    .ms-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition
+               focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200
+               disabled:cursor-not-allowed disabled:opacity-50;
     }
 
     .ms-btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-miseku-500 px-4 py-2.5 text-sm
-               font-semibold text-white transition hover:bg-miseku-600 active:bg-miseku-700
-               focus:outline-none focus-visible:ring-4 focus-visible:ring-miseku-200
-               disabled:cursor-not-allowed disabled:bg-miseku-200 disabled:text-miseku-400;
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800;
+    }
+
+    .ms-btn-solid {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-50 bg-brand-600 text-white hover:bg-brand-700;
+    }
+
+    .ms-btn-soft {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-50 bg-brand-50 text-brand-700 hover:bg-brand-100;
     }
 
     .ms-btn-ghost {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-miseku-200 bg-white
-               px-4 py-2.5 text-sm font-semibold text-miseku-700 transition hover:bg-miseku-100
-               focus:outline-none focus-visible:ring-4 focus-visible:ring-miseku-200;
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-50 border border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:text-brand-700;
     }
 
+    .ms-btn-danger {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-50 bg-red-50 text-red-600 hover:bg-red-100;
+    }
+
+    .ms-icon-btn {
+        @apply relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-ink-600 transition
+               hover:bg-brand-50 hover:text-brand-700;
+    }
+
+    /* ---------- label kecil ---------- */
     .ms-chip {
-        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold;
+    }
+
+    .ms-chip-ready {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-700;
+    }
+
+    .ms-chip-po {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold bg-accent-500 text-white;
+    }
+
+    .ms-chip-muted {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold bg-ink-100 text-ink-500;
+    }
+
+    .ms-pill {
+        @apply inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2 text-sm
+               font-semibold text-ink-700 transition hover:border-brand-300 hover:text-brand-700;
+    }
+
+    .ms-pill-active {
+        @apply border-transparent bg-brand-600 text-white hover:text-white;
+    }
+
+    .ms-section-title {
+        @apply text-xl font-extrabold tracking-tight text-ink-900 sm:text-2xl;
+    }
+
+    .ms-link {
+        @apply inline-flex items-center gap-1 text-sm font-bold text-brand-600 hover:text-accent-600;
     }
 
     .ms-tab {
-        @apply relative px-4 py-3 text-sm font-semibold text-miseku-500 transition hover:text-miseku-700;
+        @apply relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap text-ink-600 ring-1 ring-ink-200 transition hover:bg-white hover:text-brand-700;
     }
 
     .ms-tab-active {
-        @apply text-miseku-800;
+        @apply bg-brand-600 text-white ring-brand-600 hover:bg-brand-600 hover:text-white;
     }
 
-    /* Placeholder saat Livewire sedang memuat ulang grid */
     .ms-skeleton {
-        @apply animate-pulse rounded-xl bg-miseku-100;
+        @apply animate-pulse rounded-xl bg-ink-100;
+    }
+
+    /* scroll horizontal tanpa scrollbar (baris fandom, slider kecil) */
+    .ms-scroll-x {
+        @apply flex snap-x snap-mandatory gap-3 overflow-x-auto px-0.5 pt-1 pb-2; /* pt/px: supaya ring tab tidak terpotong */
+        scrollbar-width: none;
+    }
+    .ms-scroll-x::-webkit-scrollbar {
+        display: none;
     }
 }
+
+/* =====================================================================
+   MODE GELAP  (html.dark — dipasang oleh partials/color-mode.blade.php)
+   ---------------------------------------------------------------------
+   - Skala ink (netral) dibalik → latar gelap, teks terang.
+   - Warna merek/tema: tingkat 50–300 jadi rona gelap, 700–900 jadi terang
+     (dihitung dari warna 500 tema yang sedang aktif). 400–600 tetap,
+     jadi tombol & gradasi tidak berubah.
+   - Ditaruh di layer utilities dengan :where() supaya varian hover/focus
+     dari Tailwind tetap menang.
+   ===================================================================== */
+html.dark {
+    color-scheme: dark;
+    --ms-surface: #17151f;
+    --color-ink-50: #0f0d18;
+    --color-ink-100: #1b1826;
+    --color-ink-200: #2a2638;
+    --color-ink-300: #3d384f;
+    --color-ink-400: #6c6684;
+    --color-ink-500: #9993b0;
+    --color-ink-600: #b5b0c9;
+    --color-ink-700: #ccc8dc;
+    --color-ink-800: #e0ddea;
+    --color-ink-900: #f2f0f8;
+    --color-brand-50: color-mix(in srgb, var(--color-brand-500) 14%, #17151f);
+    --color-brand-100: color-mix(in srgb, var(--color-brand-500) 22%, #17151f);
+    --color-brand-200: color-mix(in srgb, var(--color-brand-500) 34%, #17151f);
+    --color-brand-300: color-mix(in srgb, var(--color-brand-500) 50%, #17151f);
+    --color-brand-700: color-mix(in srgb, var(--color-brand-500) 58%, white);
+    --color-brand-800: color-mix(in srgb, var(--color-brand-500) 42%, white);
+    --color-brand-900: color-mix(in srgb, var(--color-brand-500) 28%, white);
+    --color-accent-50: color-mix(in srgb, var(--color-accent-500) 14%, #17151f);
+    --color-accent-100: color-mix(in srgb, var(--color-accent-500) 22%, #17151f);
+    --color-accent-200: color-mix(in srgb, var(--color-accent-500) 34%, #17151f);
+    --color-accent-300: color-mix(in srgb, var(--color-accent-500) 50%, #17151f);
+    --color-accent-700: color-mix(in srgb, var(--color-accent-500) 58%, white);
+    --color-accent-800: color-mix(in srgb, var(--color-accent-500) 42%, white);
+    --color-accent-900: color-mix(in srgb, var(--color-accent-500) 28%, white);
+    --color-pop-50: color-mix(in srgb, var(--color-pop-500) 14%, #17151f);
+    --color-pop-100: color-mix(in srgb, var(--color-pop-500) 22%, #17151f);
+    --color-pop-200: color-mix(in srgb, var(--color-pop-500) 34%, #17151f);
+    --color-pop-300: color-mix(in srgb, var(--color-pop-500) 50%, #17151f);
+    --color-pop-700: color-mix(in srgb, var(--color-pop-500) 58%, white);
+    --color-pop-800: color-mix(in srgb, var(--color-pop-500) 42%, white);
+    --color-pop-900: color-mix(in srgb, var(--color-pop-500) 28%, white);
+    --color-red-50: color-mix(in srgb, #ef4444 16%, #17151f);
+    --color-red-100: color-mix(in srgb, #ef4444 24%, #17151f);
+    --color-red-200: color-mix(in srgb, #ef4444 36%, #17151f);
+    --color-red-300: color-mix(in srgb, #ef4444 52%, #17151f);
+    --color-red-700: color-mix(in srgb, #ef4444 55%, white);
+    --color-red-800: color-mix(in srgb, #ef4444 40%, white);
+    --color-red-900: color-mix(in srgb, #ef4444 28%, white);
+    --color-emerald-50: color-mix(in srgb, #10b981 16%, #17151f);
+    --color-emerald-100: color-mix(in srgb, #10b981 24%, #17151f);
+    --color-emerald-200: color-mix(in srgb, #10b981 36%, #17151f);
+    --color-emerald-300: color-mix(in srgb, #10b981 52%, #17151f);
+    --color-emerald-700: color-mix(in srgb, #10b981 55%, white);
+    --color-emerald-800: color-mix(in srgb, #10b981 40%, white);
+    --color-emerald-900: color-mix(in srgb, #10b981 28%, white);
+    --color-amber-50: color-mix(in srgb, #f59e0b 16%, #17151f);
+    --color-amber-100: color-mix(in srgb, #f59e0b 24%, #17151f);
+    --color-amber-200: color-mix(in srgb, #f59e0b 36%, #17151f);
+    --color-amber-300: color-mix(in srgb, #f59e0b 52%, #17151f);
+    --color-amber-700: color-mix(in srgb, #f59e0b 55%, white);
+    --color-amber-800: color-mix(in srgb, #f59e0b 40%, white);
+    --color-amber-900: color-mix(in srgb, #f59e0b 28%, white);
+    --color-sky-50: color-mix(in srgb, #0ea5e9 16%, #17151f);
+    --color-sky-100: color-mix(in srgb, #0ea5e9 24%, #17151f);
+    --color-sky-200: color-mix(in srgb, #0ea5e9 36%, #17151f);
+    --color-sky-300: color-mix(in srgb, #0ea5e9 52%, #17151f);
+    --color-sky-700: color-mix(in srgb, #0ea5e9 55%, white);
+    --color-sky-800: color-mix(in srgb, #0ea5e9 40%, white);
+    --color-sky-900: color-mix(in srgb, #0ea5e9 28%, white);
+    --color-green-50: color-mix(in srgb, #22c55e 16%, #17151f);
+    --color-green-100: color-mix(in srgb, #22c55e 24%, #17151f);
+    --color-green-200: color-mix(in srgb, #22c55e 36%, #17151f);
+    --color-green-300: color-mix(in srgb, #22c55e 52%, #17151f);
+    --color-green-700: color-mix(in srgb, #22c55e 55%, white);
+    --color-green-800: color-mix(in srgb, #22c55e 40%, white);
+    --color-green-900: color-mix(in srgb, #22c55e 28%, white);
+    --color-yellow-50: color-mix(in srgb, #eab308 16%, #17151f);
+    --color-yellow-100: color-mix(in srgb, #eab308 24%, #17151f);
+    --color-yellow-200: color-mix(in srgb, #eab308 36%, #17151f);
+    --color-yellow-300: color-mix(in srgb, #eab308 52%, #17151f);
+    --color-yellow-700: color-mix(in srgb, #eab308 55%, white);
+    --color-yellow-800: color-mix(in srgb, #eab308 40%, white);
+    --color-yellow-900: color-mix(in srgb, #eab308 28%, white);
+    --color-orange-50: color-mix(in srgb, #f97316 16%, #17151f);
+    --color-orange-100: color-mix(in srgb, #f97316 24%, #17151f);
+    --color-orange-200: color-mix(in srgb, #f97316 36%, #17151f);
+    --color-orange-300: color-mix(in srgb, #f97316 52%, #17151f);
+    --color-orange-700: color-mix(in srgb, #f97316 55%, white);
+    --color-orange-800: color-mix(in srgb, #f97316 40%, white);
+    --color-orange-900: color-mix(in srgb, #f97316 28%, white);
+    --color-blue-50: color-mix(in srgb, #3b82f6 16%, #17151f);
+    --color-blue-100: color-mix(in srgb, #3b82f6 24%, #17151f);
+    --color-blue-200: color-mix(in srgb, #3b82f6 36%, #17151f);
+    --color-blue-300: color-mix(in srgb, #3b82f6 52%, #17151f);
+    --color-blue-700: color-mix(in srgb, #3b82f6 55%, white);
+    --color-blue-800: color-mix(in srgb, #3b82f6 40%, white);
+    --color-blue-900: color-mix(in srgb, #3b82f6 28%, white);
+    --color-rose-50: color-mix(in srgb, #f43f5e 16%, #17151f);
+    --color-rose-100: color-mix(in srgb, #f43f5e 24%, #17151f);
+    --color-rose-200: color-mix(in srgb, #f43f5e 36%, #17151f);
+    --color-rose-300: color-mix(in srgb, #f43f5e 52%, #17151f);
+    --color-rose-700: color-mix(in srgb, #f43f5e 55%, white);
+    --color-rose-800: color-mix(in srgb, #f43f5e 40%, white);
+    --color-rose-900: color-mix(in srgb, #f43f5e 28%, white);
+    --color-violet-50: color-mix(in srgb, #8b5cf6 16%, #17151f);
+    --color-violet-100: color-mix(in srgb, #8b5cf6 24%, #17151f);
+    --color-violet-200: color-mix(in srgb, #8b5cf6 36%, #17151f);
+    --color-violet-300: color-mix(in srgb, #8b5cf6 52%, #17151f);
+    --color-violet-700: color-mix(in srgb, #8b5cf6 55%, white);
+    --color-violet-800: color-mix(in srgb, #8b5cf6 40%, white);
+    --color-violet-900: color-mix(in srgb, #8b5cf6 28%, white);
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+    --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.35), 0 24px 48px -18px rgb(0 0 0 / 0.7);
+}
+
+@layer utilities {
+    /* permukaan putih → permukaan gelap */
+    :where(html.dark) .bg-white, :where(html.dark) .ms-card, :where(html.dark) .ms-input, :where(html.dark) .ms-select, :where(html.dark) .ms-btn-ghost, :where(html.dark) .ms-pill:not(.ms-pill-active) { background-color: var(--ms-surface); }
+    :where(html.dark) .bg-white\/95 { background-color: color-mix(in srgb, var(--ms-surface) 95%, transparent); }
+    :where(html.dark) .bg-white\/90 { background-color: color-mix(in srgb, var(--ms-surface) 90%, transparent); }
+    :where(html.dark) .bg-white\/85 { background-color: color-mix(in srgb, var(--ms-surface) 85%, transparent); }
+    :where(html.dark) .bg-white\/80 { background-color: color-mix(in srgb, var(--ms-surface) 80%, transparent); }
+    :where(html.dark) .bg-white\/70 { background-color: color-mix(in srgb, var(--ms-surface) 70%, transparent); }
+    :where(html.dark) .hover\:bg-white:hover, :where(html.dark) .focus\:bg-white:focus, :where(html.dark) .hover\:bg-white\/90:hover { background-color: var(--ms-surface); }
+    /* permukaan gelap tetap gelap (footer, toast, menu aktif, overlay gambar) */
+    :where(html.dark) .bg-ink-900 { background-color: #25213a; }
+    :where(html.dark) .bg-ink-900\/75 { background-color: rgb(8 7 14 / 0.75); }
+    :where(html.dark) .bg-ink-900\/70 { background-color: rgb(8 7 14 / 0.70); }
+    :where(html.dark) .bg-ink-900\/40 { background-color: rgb(8 7 14 / 0.40); }
+    :where(html.dark) .from-ink-900\/90 { --tw-gradient-from: rgb(8 7 14 / 0.9); }
+    :where(html.dark) .via-ink-900\/50 { --tw-gradient-via: rgb(8 7 14 / 0.5); }
+    :where(html.dark) .bg-ink-900 .text-ink-300, :where(html.dark) .bg-ink-900.text-ink-300 { color: #c9c4d8; }
+    :where(html.dark) .bg-ink-900 .text-ink-400 { color: #9d97b3; }
+    /* teks tingkat 600 (warna tombol tetap) dibuat lebih terang supaya terbaca di latar gelap */
+    :where(html.dark) .text-brand-600, :where(html.dark) .hover\:text-brand-600:hover, :where(html.dark) .ms-link { color: color-mix(in srgb, var(--color-brand-500) 62%, white); }
+    :where(html.dark) .text-accent-600, :where(html.dark) .hover\:text-accent-600:hover { color: color-mix(in srgb, var(--color-accent-500) 62%, white); }
+    :where(html.dark) .text-pop-600, :where(html.dark) .hover\:text-pop-600:hover { color: color-mix(in srgb, var(--color-pop-500) 62%, white); }
+    :where(html.dark) .text-red-600, :where(html.dark) .hover\:text-red-600:hover, :where(html.dark) .ms-error { color: color-mix(in srgb, #ef4444 62%, white); }
+    :where(html.dark) .text-emerald-600, :where(html.dark) .hover\:text-emerald-600:hover { color: color-mix(in srgb, #10b981 62%, white); }
+    :where(html.dark) .text-amber-600, :where(html.dark) .hover\:text-amber-600:hover { color: color-mix(in srgb, #f59e0b 62%, white); }
+    :where(html.dark) .text-sky-600, :where(html.dark) .hover\:text-sky-600:hover { color: color-mix(in srgb, #0ea5e9 62%, white); }
+    :where(html.dark) .text-green-600, :where(html.dark) .hover\:text-green-600:hover { color: color-mix(in srgb, #22c55e 62%, white); }
+    :where(html.dark) .text-yellow-600, :where(html.dark) .hover\:text-yellow-600:hover { color: color-mix(in srgb, #eab308 62%, white); }
+    :where(html.dark) .text-orange-600, :where(html.dark) .hover\:text-orange-600:hover { color: color-mix(in srgb, #f97316 62%, white); }
+    :where(html.dark) .text-blue-600, :where(html.dark) .hover\:text-blue-600:hover { color: color-mix(in srgb, #3b82f6 62%, white); }
+    :where(html.dark) .text-rose-600, :where(html.dark) .hover\:text-rose-600:hover { color: color-mix(in srgb, #f43f5e 62%, white); }
+    :where(html.dark) .text-violet-600, :where(html.dark) .hover\:text-violet-600:hover { color: color-mix(in srgb, #8b5cf6 62%, white); }
+    :where(html.dark) ::selection { background-color: var(--color-brand-300); color: white; }
+}
+
+/* Teks 200/300 di mode terang hanya dipakai di atas latar gelap (footer, banner),
+   jadi di mode gelap tetap dibuat terang. */
+@layer utilities {
+    :where(html.dark) .text-brand-200, :where(html.dark) .text-brand-300 { color: color-mix(in srgb, var(--color-brand-500) 45%, white); }
+    :where(html.dark) .text-accent-200, :where(html.dark) .text-accent-300 { color: color-mix(in srgb, var(--color-accent-500) 45%, white); }
+    :where(html.dark) .text-pop-200, :where(html.dark) .text-pop-300 { color: color-mix(in srgb, var(--color-pop-500) 45%, white); }
+}
+

@@ -29,13 +29,11 @@ class Login extends Component
     #[Validate('required|string')]
     public string $password = '';
 
-    public bool $remember = false;
-
     public function mount()
     {
         // Sudah login? tidak perlu lihat halaman ini lagi.
         if (Auth::check()) {
-            return $this->redirect(route('account'), navigate: true);
+            return $this->redirect(Auth::user()->isAdmin() ? route('admin.dashboard') : route('home'), navigate: true);
         }
 
         return null;
@@ -63,7 +61,7 @@ class Login extends Component
             ]);
         }
 
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
             RateLimiter::hit($key, 60);
 
             throw ValidationException::withMessages([
@@ -83,7 +81,21 @@ class Login extends Component
         RateLimiter::clear($key);
         request()->session()->regenerate();
 
-        return $this->redirectIntended(route('home'), navigate: true);
+        $user = Auth::user();
+
+        // Tujuan default per peran
+        $default = match (true) {
+            $user->isAdmin()  => route('admin.dashboard'),
+            $user->isArtist() => route('studio.dashboard'),
+            default           => route('home'),
+        };
+
+        // Admin selalu masuk ke panel admin (bukan halaman yang sempat dibuka sebelumnya)
+        if ($user->isAdmin()) {
+            session()->forget('url.intended');
+        }
+
+        return $this->redirectIntended($default, navigate: true);
     }
 
     public function render()

@@ -47,6 +47,20 @@ return [
             'report' => false,
         ],
 
+        /*
+         | Unggahan Miseku (foto produk, foto profil).
+         | Langsung ke public/uploads supaya TIDAK perlu `php artisan storage:link`
+         | (symlink sering bermasalah di Windows/XAMPP).
+         */
+        'uploads' => [
+            'driver' => 'local',
+            'root' => public_path('uploads'),
+            'url' => '/uploads',
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

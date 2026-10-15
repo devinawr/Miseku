@@ -31,6 +31,7 @@ return new class extends Migration
         Schema::create('artist_profile', function (Blueprint $t) {
             $t->id();
             $t->foreignId('user_id')->constrained('user')->cascadeOnUpdate();
+            $t->unique('user_id', 'uq_artist_profile_user'); // 1:1 user ↔ artist_profile
             $t->string('shop_name', 120);
             $t->text('shop_description')->nullable();
             $t->string('bank_name', 60)->nullable();

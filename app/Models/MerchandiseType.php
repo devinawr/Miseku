@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MerchandiseType extends Model
 {
@@ -16,5 +17,11 @@ class MerchandiseType extends Model
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('status', 'active');
+    }
+
+    /** User (biasanya artis) yang mengusulkan; NULL = dibuat admin/seed. */
+    public function proposer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'proposed_by');
     }
 }

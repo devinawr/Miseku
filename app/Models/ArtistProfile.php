@@ -32,6 +32,31 @@ class ArtistProfile extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(CustomerOrder::class, 'artist_profile_id');
+    }
+
+    public function booths(): HasMany
+    {
+        return $this->hasMany(EventBooth::class, 'artist_profile_id');
+    }
+
+    public function balanceTransactions(): HasMany
+    {
+        return $this->hasMany(BalanceTransaction::class, 'artist_profile_id');
+    }
+
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(Withdrawal::class, 'artist_profile_id');
+    }
+
+    public function polls(): HasMany
+    {
+        return $this->hasMany(DesignPoll::class, 'artist_profile_id');
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'artist_profile_id');

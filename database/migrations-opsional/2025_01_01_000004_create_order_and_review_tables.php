@@ -21,7 +21,7 @@ return new class extends Migration
             $t->foreignId('artist_profile_id')->constrained('artist_profile')->restrictOnDelete()->cascadeOnUpdate();
             $t->foreignId('address_id')->nullable()->constrained('address')->nullOnDelete()->cascadeOnUpdate();
             $t->unsignedBigInteger('event_booth_id')->nullable();
-            $t->unsignedBigInteger('custom_request_id')->nullable();
+            $t->unsignedBigInteger('custom_request_id')->nullable()->unique('uq_order_request'); // 1:0..1
             $t->enum('order_type', ['ready_stock', 'pre_order', 'custom', 'ots_event']);
             $t->enum('shipping_method', ['courier', 'event_pickup'])->nullable();
             $t->enum('payment_scheme', ['full', 'dp'])->default('full');

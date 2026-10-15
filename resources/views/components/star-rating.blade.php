@@ -17,12 +17,12 @@
             @php $fill = max(0, min(1, $rating - $i + 1)); @endphp
             <span class="relative inline-block {{ $box }}">
                 {{-- bintang kosong --}}
-                <svg class="absolute inset-0 {{ $box }} text-miseku-200" viewBox="0 0 20 20" fill="currentColor">
+                <svg class="absolute inset-0 {{ $box }} text-ink-200" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L1.6 7.7l5.8-.8L10 1.6z"/>
                 </svg>
                 {{-- bintang terisi, dipotong sesuai pecahan rating --}}
                 <span class="absolute inset-0 overflow-hidden" style="width: {{ $fill * 100 }}%">
-                    <svg class="{{ $box }} text-miseku-500" viewBox="0 0 20 20" fill="currentColor">
+                    <svg class="{{ $box }} text-amber-400" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L1.6 7.7l5.8-.8L10 1.6z"/>
                     </svg>
                 </span>
@@ -31,10 +31,10 @@
     </div>
 
     @if ($showValue)
-        <span class="{{ $text }} font-semibold text-miseku-700">{{ number_format($rating, 1, ',', '.') }}</span>
+        <span class="{{ $text }} font-semibold text-ink-800">{{ number_format($rating, 1, ',', '.') }}</span>
     @endif
 
     @if (! is_null($count))
-        <span class="{{ $text }} text-miseku-400">({{ $count }})</span>
+        <span class="{{ $text }} text-ink-400">({{ $count }})</span>
     @endif
 </div>

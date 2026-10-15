@@ -1,21 +1,28 @@
 {
+    "id": "/",
     "name": "Miseku — Marketplace Fan Merchandise",
     "short_name": "Miseku",
-    "description": "Marketplace fan merchandise karya artis independen Indonesia.",
+    "description": "Marketplace fan merchandise produk artis independen Indonesia.",
     "lang": "id",
-    "start_url": "/",
+    "dir": "ltr",
+    "start_url": "/?source=pwa",
     "scope": "/",
     "display": "standalone",
+    "display_override": ["standalone", "minimal-ui"],
     "orientation": "portrait-primary",
-    "background_color": "#f6f9ff",
-    "theme_color": "#7a9bcf",
+    "background_color": "#faf7ff",
+    "theme_color": "#6d28d9",
+    "categories": ["shopping", "lifestyle"],
     "icons": [
         { "src": "/img/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
         { "src": "/img/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-        { "src": "/img/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+        { "src": "/img/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+        { "src": "/img/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
     ],
     "shortcuts": [
-        { "name": "Katalog karya", "url": "/" },
-        { "name": "Pre-order", "url": "/?status=pre_order" }
+        { "name": "Katalog produk", "short_name": "Katalog", "url": "/katalog", "icons": [{ "src": "/img/icons/icon-192.png", "sizes": "192x192" }] },
+        { "name": "Pre-order", "short_name": "Pre-order", "url": "/katalog?status=pre_order", "icons": [{ "src": "/img/icons/icon-192.png", "sizes": "192x192" }] },
+        { "name": "Pesanan saya", "short_name": "Pesanan", "url": "/pesanan", "icons": [{ "src": "/img/icons/icon-192.png", "sizes": "192x192" }] },
+        { "name": "Chat", "short_name": "Chat", "url": "/chat", "icons": [{ "src": "/img/icons/icon-192.png", "sizes": "192x192" }] }
     ]
 }

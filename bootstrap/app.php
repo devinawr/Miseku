@@ -11,7 +11,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureRole::class,
+        ]);
+
+        // Admin hanya di panel admin (tidak ada beranda/belanja)
+        $middleware->appendToGroup('web', \App\Http\Middleware\KeepAdminInPanel::class);
+
+        // Webhook Midtrans dipanggil server Midtrans (tanpa token CSRF)
+        $middleware->validateCsrfTokens(except: ['midtrans/*']);
+
+        // Tamu yang membuka halaman khusus login diarahkan ke /masuk
+        $middleware->redirectGuestsTo(fn () => route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

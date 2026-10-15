@@ -18,8 +18,18 @@ class OrderItem extends Model
         return ['quantity' => 'integer', 'unit_price' => 'decimal:2', 'subtotal' => 'decimal:2'];
     }
 
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(CustomerOrder::class, 'customer_order_id');
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(PoBatch::class, 'po_batch_id');
     }
 }

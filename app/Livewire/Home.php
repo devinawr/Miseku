@@ -2,9 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\ArtistProfile;
 use App\Models\Fandom;
 use App\Models\Product;
-use App\Models\ProductView;
+use App\Services\ContentBasedRecommender;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -13,135 +14,141 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * Beranda — halaman rekomendasi.
- *
- * Beranda TIDAK memuat pencarian maupun filter; keduanya milik halaman Katalog.
- * Kotak cari di sini hanya mengantar ke /katalog?q=... lewat form GET biasa.
- *
- * Rekomendasi memakai pendekatan bobot yang sama dengan rancangan BPMN 8:
- * karakter 0,5 · fandom 0,3 · jenis merchandise 0,2. Bahan vektornya diambil
- * dari tabel product_view (produk yang pernah dilihat user). Pengunjung yang
- * belum login otomatis mendapat daftar berperingkat tertinggi.
+ * Beranda — konten bisnis langsung di depan (masukan dosen):
+ * banner slider → fandom → rekomendasi CBF → pre-order → produk baru → toko.
  */
 #[Layout('components.layouts.app')]
 #[Title('Beranda')]
 class Home extends Component
 {
-    private const BOBOT_KARAKTER = 0.5;
-    private const BOBOT_FANDOM   = 0.3;
-    private const BOBOT_JENIS    = 0.2;
-
-    /** Produk yang pernah dilihat user, jadi bahan vektor rekomendasi. */
-    private function riwayat(): Collection
-    {
-        if (! Auth::check()) {
-            return collect();
-        }
-
-        return ProductView::query()
-            ->where('user_id', Auth::id())
-            ->with(['product:id,fandom_character_id,merchandise_type_id', 'product.character:id,fandom_id'])
-            ->orderByDesc('viewed_at')
-            ->limit(30)
-            ->get()
-            ->pluck('product')
-            ->filter();
-    }
+    private const WITH = ['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType', 'character.fandom'];
 
     /**
-     * @return array{items: Collection, personal: bool}
+     * Slide banner = gambar jadi (seperti banner toko hobi), 2 per layar di desktop.
+     * File di public/img/banner/ (lihat README.txt di folder itu):
+     *   preorder.jpg · fandom-{slug}.jpg (satu per fandom) · baru.jpg · artis.jpg
+     * Urutan: pre-order → fandom favorit user → fandom lain (terbanyak produk) → baru → artis.
+     * Slide yang filenya tidak ada dilewati.
      */
+    #[Computed]
+    public function slides(): array
+    {
+        $slides = [];
+        $add = function (?string $image, string $alt, string $href) use (&$slides) {
+            if ($image) {
+                $slides[] = ['image' => $image, 'alt' => $alt, 'href' => $href];
+            }
+        };
+
+        $hasPo = Product::visible()->where('availability_type', 'pre_order')
+            ->whereHas('batches', fn ($q) => $q->open())->exists();
+        if ($hasPo) {
+            $add(Fandom::publicImage('img/banner/preorder'), 'Pre-order dibuka — bisa DP dulu', route('catalog', ['status' => 'pre_order']));
+        }
+
+        $fav = $this->favoriteIds();
+        $this->fandomPopuler
+            ->sortBy(fn ($f) => $fav->contains($f->id) ? 0 : 1, SORT_REGULAR, false)
+            ->each(fn ($f) => $add($f->banner_url, $f->fandom_name . ' — merch collection', route('catalog', ['fandom' => $f->id])));
+
+        $add(Fandom::publicImage('img/banner/baru'), 'Produk baru', route('catalog'));
+
+        if (! Auth::check() || Auth::user()->role === 'buyer') {
+            $add(Fandom::publicImage('img/banner/artis'), 'Buka toko di Miseku', Auth::check() ? route('account', ['tab' => 'toko']) : route('register'));
+        }
+
+        return $slides;
+    }
+
+    private function favoriteIds(): Collection
+    {
+        return Auth::check() ? Auth::user()->favoriteFandoms()->pluck('fandom.id') : collect();
+    }
+
+    /** Rekomendasi CBF (login) atau produk terpopuler (tamu / belum ada jejak). */
     #[Computed]
     public function rekomendasi(): array
     {
-        $riwayat = $this->riwayat();
+        if (Auth::check()) {
+            $items = app(ContentBasedRecommender::class)->forUser(Auth::user(), 10);
 
-        $query = Product::query()
-            ->visible()
-            ->with(['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType', 'character.fandom']);
+            if ($items->isNotEmpty()) {
+                // Kalau hasil CBF kurang dari 1 baris penuh, lengkapi dengan produk populer
+                // (ditandai berbeda) supaya beranda tidak terlihat kosong.
+                if ($items->count() < 10) {
+                    $own = Auth::user()->artistProfile?->id;
+                    $filler = Product::visible()->with(self::WITH)
+                        ->whereNotIn('id', $items->pluck('id'))
+                        ->when($own, fn ($q) => $q->where('artist_profile_id', '!=', $own))
+                        ->orderByDesc('rating')->orderByDesc('rating_count')
+                        ->take(10 - $items->count())->get()
+                        ->each(fn ($p) => $p->reason = 'Populer di Miseku');
+                    $items = $items->concat($filler)->values();
+                }
 
-        // Belum ada jejak: tampilkan yang paling disukai pembeli lain.
-        if ($riwayat->isEmpty()) {
-            return [
-                'items' => $query->orderByDesc('rating')->orderByDesc('rating_count')->take(8)->get(),
-                'personal' => false,
-            ];
+                return ['items' => $items, 'personal' => true];
+            }
         }
 
-        $karakter = $riwayat->pluck('fandom_character_id')->countBy();
-        $jenis    = $riwayat->pluck('merchandise_type_id')->countBy();
-        $fandom   = $riwayat->pluck('character.fandom_id')->filter()->countBy();
-        $dilihat  = $riwayat->pluck('id')->unique();
-
-        $kandidat = $query->whereNotIn('id', $dilihat)->limit(200)->get();
-
-        $terurut = $kandidat
-            ->map(function (Product $p) use ($karakter, $fandom, $jenis) {
-                $skor = 0.0;
-
-                if ($karakter->has($p->fandom_character_id)) {
-                    $skor += self::BOBOT_KARAKTER;
-                }
-                if ($fandom->has($p->character?->fandom_id)) {
-                    $skor += self::BOBOT_FANDOM;
-                }
-                if ($jenis->has($p->merchandise_type_id)) {
-                    $skor += self::BOBOT_JENIS;
-                }
-
-                // Rating dipakai sebagai pemecah seri, bukan penentu utama.
-                $p->skor_rekomendasi = $skor + ((float) $p->rating / 100);
-
-                return $p;
-            })
-            ->sortByDesc('skor_rekomendasi')
-            ->values()
-            ->take(8);
-
-        return ['items' => $terurut, 'personal' => true];
+        return [
+            'items'    => Product::visible()->with(self::WITH)->orderByDesc('rating')->orderByDesc('rating_count')->take(10)->get(),
+            'personal' => false,
+        ];
     }
 
     #[Computed]
-    public function terbaru()
+    public function needsOnboarding(): bool
     {
-        return Product::query()
-            ->visible()
-            ->with(['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType', 'character.fandom'])
-            ->orderByDesc('created_at')
-            ->take(4)
-            ->get();
+        return Auth::check() && ! Auth::user()->isAdmin() && $this->favoriteIds()->isEmpty();
     }
 
     #[Computed]
     public function preOrderBuka()
     {
-        return Product::query()
-            ->visible()
+        return Product::visible()->with(self::WITH)
             ->where('availability_type', 'pre_order')
             ->whereHas('batches', fn ($q) => $q->open())
-            ->with(['primaryImage', 'openBatch', 'artistProfile', 'merchandiseType', 'character.fandom'])
-            ->orderByDesc('created_at')
-            ->take(4)
-            ->get();
+            ->get()
+            ->sortBy(fn (Product $p) => $p->openBatch?->closes_at)
+            ->take(5)
+            ->values();
     }
 
-    /** Fandom aktif beserta jumlah karyanya, untuk pintasan jelajah. */
+    #[Computed]
+    public function terbaru()
+    {
+        return Product::visible()->with(self::WITH)->latest('created_at')->take(10)->get();
+    }
+
+    /** Fandom aktif, diurutkan dari yang produknya paling banyak (untuk baris pintasan). */
     #[Computed]
     public function fandomPopuler()
     {
-        $jumlahKarya = Product::query()
+        $jumlahProduk = Product::query()
             ->visible()
             ->join('fandom_character', 'fandom_character.id', '=', 'product.fandom_character_id')
             ->whereColumn('fandom_character.fandom_id', 'fandom.id')
             ->selectRaw('count(*)');
 
-        return Fandom::query()
-            ->active()
+        return Fandom::active()
             ->select('fandom.id', 'fandom.fandom_name')
-            ->selectSub($jumlahKarya, 'karya_count')
-            ->orderByDesc('karya_count')
-            ->take(6)
+            ->selectSub($jumlahProduk, 'product_count')
+            ->orderByDesc('product_count')
             ->get();
+    }
+
+    #[Computed]
+    public function tokoPilihan()
+    {
+        return ArtistProfile::query()
+            // Tanpa ->take() di dalam eager load: Laravel akan memakai ROW_NUMBER() OVER(),
+            // yang tidak didukung MySQL 5.7 / MariaDB lama (XAMPP). Dibatasi 3 di PHP saja.
+            ->with(['user', 'banner', 'products' => fn ($q) => $q->visible()->with('primaryImage')->latest('created_at')])
+            ->withCount(['products as product_count' => fn ($q) => $q->visible()])
+            ->orderByDesc('rating')
+            ->take(3)
+            ->get()
+            ->each(fn ($shop) => $shop->setRelation('products', $shop->products->take(3)->values()));
     }
 
     public function render()

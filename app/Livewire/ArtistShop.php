@@ -14,7 +14,7 @@ use Livewire\WithPagination;
 /**
  * Modul 3 — Halaman Toko Artist.
  *
- * Banner + avatar + bio + rating toko, dengan tiga tab: Karya, Review, Tentang.
+ * Banner + avatar + bio + rating toko, dengan tiga tab: Produk, Review, Tentang.
  * Tab disimpan di query string supaya link ke tab tertentu bisa dibagikan.
  */
 #[Layout('components.layouts.app')]
@@ -24,9 +24,9 @@ class ArtistShop extends Component
 
     public ArtistProfile $artist;
 
-    /** karya | review | tentang */
-    #[Url(as: 'tab', except: 'karya')]
-    public string $tab = 'karya';
+    /** produk | review | tentang */
+    #[Url(as: 'tab', except: 'produk')]
+    public string $tab = 'produk';
 
     #[Url(as: 'urut', except: 'terbaru')]
     public string $sort = 'terbaru';
@@ -38,7 +38,7 @@ class ArtistShop extends Component
 
     public function selectTab(string $tab): void
     {
-        $this->tab = in_array($tab, ['karya', 'review', 'tentang'], true) ? $tab : 'karya';
+        $this->tab = in_array($tab, ['produk', 'review', 'tentang'], true) ? $tab : 'produk';
         $this->resetPage();
     }
 
@@ -51,7 +51,7 @@ class ArtistShop extends Component
     public function stats(): array
     {
         return [
-            'karya'  => $this->artist->products()->visible()->count(),
+            'produk'  => $this->artist->products()->visible()->count(),
             'po'     => $this->artist->products()->visible()->where('availability_type', 'pre_order')->count(),
             'review' => $this->artist->shopReviews()->count(),
         ];

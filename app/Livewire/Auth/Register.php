@@ -2,10 +2,8 @@
 
 namespace App\Livewire\Auth;
 
-use App\Models\ArtistProfile;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
@@ -15,9 +13,8 @@ use Livewire\Component;
 /**
  * Modul 4b — Daftar.
  *
- * Satu form untuk dua peran. Memilih "artist" otomatis membuat baris
- * artist_profile (relasi 1:1 dengan user) dalam satu transaksi, sesuai ERD:
- * satu akun = satu toko, tapi akun itu tetap bisa belanja sebagai pembeli.
+ * Pendaftaran SELALU sebagai pembeli (role = buyer). Toko dibuka belakangan
+ * dari Akun → Buka toko (membuat artist_profile + alamat toko), seperti Shopee.
  */
 #[Layout('components.layouts.guest')]
 #[Title('Daftar')]
@@ -29,19 +26,13 @@ class Register extends Component
     public string $password = '';
     public string $password_confirmation = '';
 
-    /** buyer | artist */
-    public string $role = 'buyer';
-
-    public string $shop_name = '';
-    public string $shop_description = '';
-
     public bool $agree = false;
 
     public function mount()
     {
         // Sudah login? tidak perlu lihat halaman ini lagi.
         if (Auth::check()) {
-            return $this->redirect(route('account'), navigate: true);
+            return $this->redirect(route('home'), navigate: true);
         }
 
         return null;
@@ -52,11 +43,8 @@ class Register extends Component
         return [
             'name'             => ['required', 'string', 'min:3', 'max:120'],
             'email'            => ['required', 'email', 'max:150', Rule::unique('user', 'email')],
-            'phone'            => ['nullable', 'string', 'max:20'],
+            'phone'            => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\\-\\s]{8,20}$/'],
             'password'         => ['required', 'confirmed', Password::min(8)],
-            'role'             => ['required', Rule::in(['buyer', 'artist'])],
-            'shop_name'        => ['nullable', 'required_if:role,artist', 'string', 'max:120', Rule::unique('artist_profile', 'shop_name')],
-            'shop_description' => ['nullable', 'string', 'max:1000'],
             'agree'            => ['accepted'],
         ];
     }
@@ -72,8 +60,7 @@ class Register extends Component
             'password.required'     => 'Password wajib diisi.',
             'password.confirmed'    => 'Konfirmasi password tidak sama.',
             'password.min'          => 'Password minimal 8 karakter.',
-            'shop_name.required_if' => 'Nama toko wajib diisi untuk akun artis.',
-            'shop_name.unique'      => 'Nama toko ini sudah dipakai artis lain.',
+            'phone.regex'           => 'Nomor HP hanya boleh angka (8–20 digit).',
             'agree.accepted'        => 'Kamu harus menyetujui ketentuan Miseku.',
         ];
     }
@@ -81,7 +68,7 @@ class Register extends Component
     /** Validasi per field saat user pindah input, biar errornya terasa langsung. */
     public function updated(string $property): void
     {
-        if (in_array($property, ['agree', 'role'], true)) {
+        if ($property === 'agree') {
             return;
         }
 
@@ -92,35 +79,22 @@ class Register extends Component
     {
         $data = $this->validate();
 
-        $user = DB::transaction(function () use ($data) {
-            $user = User::create([
-                'name'          => $data['name'],
-                'email'         => $data['email'],
-                'phone'         => $data['phone'] ?: null,
-                'password'      => $data['password'],
-                'role'          => $data['role'],
-                'profile_photo' => null,
-            ]);
+        $user = User::create([
+            'name'          => $data['name'],
+            'email'         => $data['email'],
+            'phone'         => $data['phone'] ?: null,
+            'password'      => $data['password'],
+            'role'          => 'buyer',
+            'profile_photo' => null,
+        ]);
 
-            if ($data['role'] === 'artist') {
-                ArtistProfile::create([
-                    'user_id'          => $user->id,
-                    'shop_name'        => $data['shop_name'],
-                    'shop_description' => $data['shop_description'] ?: null,
-                ]);
-            }
-
-            return $user;
-        });
-
-        Auth::login($user, remember: true);
+        Auth::login($user);
         request()->session()->regenerate();
 
-        session()->flash('status', $data['role'] === 'artist'
-            ? 'Akun artis berhasil dibuat. Tokomu sudah aktif — modul unggah karya menyusul.'
-            : 'Akun berhasil dibuat. Selamat menjelajah katalog Miseku!');
+        session()->flash('status', 'Akun berhasil dibuat! Satu langkah lagi: pilih fandom favoritmu.');
 
-        return $this->redirect(route('account'), navigate: true);
+        // Langkah onboarding: pilih fandom favorit → mengatasi cold start rekomendasi.
+        return $this->redirect(route('onboarding'), navigate: true);
     }
 
     public function render()
