@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`fandom` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 8
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -70,7 +69,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`fandom_theming` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 8
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -103,7 +101,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`user` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 16
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -131,7 +128,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`address` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 13
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -160,7 +156,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`artist_profile` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
-AUTO_INCREMENT = 4
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -183,7 +178,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`merchandise_type` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 14
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -215,7 +209,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`custom_request` (
     REFERENCES `marketplace_fanmerch`.`merchandise_type` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 4
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -241,7 +234,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`event` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 4
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -272,7 +264,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`event_booth` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 8
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -339,7 +330,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`customer_order` (
     REFERENCES `marketplace_fanmerch`.`user` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 60
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -371,7 +361,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`payment` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 64
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -406,7 +395,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`withdrawal` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 5
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -453,7 +441,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`balance_transaction` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 107
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -485,7 +472,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`cancellation` (
     REFERENCES `marketplace_fanmerch`.`user` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 2
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -514,7 +500,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`fandom_character` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 18
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -541,7 +526,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`design_poll` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -562,7 +546,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`design_option` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 6
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -613,7 +596,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`product` (
     REFERENCES `marketplace_fanmerch`.`merchandise_type` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 26
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -690,7 +672,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`chat_message` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 7
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -722,7 +703,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`custom_offer` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 4
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -756,7 +736,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`design_vote` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 12
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -785,7 +764,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`discussion_topic` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 5
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -816,7 +794,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`event_pickup` (
     REFERENCES `marketplace_fanmerch`.`event_booth` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -844,7 +821,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`fandom_member` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 13
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -871,7 +847,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`favorite_fandom` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 9
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -896,7 +871,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`file_upload` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 31
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -927,7 +901,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`po_batch` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 10
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -961,7 +934,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`order_item` (
     REFERENCES `marketplace_fanmerch`.`product` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 59
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -991,7 +963,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`order_return` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 2
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1016,7 +987,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`platform_setting` (
     REFERENCES `marketplace_fanmerch`.`user` (`id`)
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 2
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1052,7 +1022,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`product_review` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 41
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1079,7 +1048,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`product_view` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 19
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1116,7 +1084,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`review` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 54
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1158,7 +1125,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`search_history` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 6
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1207,7 +1173,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`topic_message` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 10
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 
@@ -1240,7 +1205,6 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`track_transaksi` (
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 86
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 

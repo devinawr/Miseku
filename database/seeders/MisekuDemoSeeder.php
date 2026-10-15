@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Address;
 use App\Models\ArtistProfile;
 use App\Models\ChatMessage;
-use App\Models\CommunityReport;
 use App\Models\CustomOffer;
 use App\Models\CustomRequest;
 use App\Models\CustomerOrder;
@@ -31,6 +30,7 @@ use App\Models\Review;
 use App\Models\SearchHistory;
 use App\Models\TopicMessage;
 use App\Models\User;
+use App\Services\CommunityModerationService;
 use App\Services\BalanceService;
 use App\Services\CancellationService;
 use App\Services\OrderService;
@@ -416,16 +416,10 @@ class MisekuDemoSeeder extends Seeder
 
         // Contoh laporan menunggu ditinjau admin (Panel admin → Komunitas → Laporan)
         $spam = $post($t2, $b[4], 'Jual akun Genshin AR 60 murah meriah, transfer dulu ya. DM WA 0812-xxxx-xxxx', 12);
-        CommunityReport::create([
-            'reporter_id'         => $b[2]->id,
-            'reported_user_id'    => $b[4]->id,
-            'discussion_topic_id' => $t2->id,
-            'topic_message_id'    => $spam->id,
-            'reason_category'     => 'penipuan',
-            'reason_note'         => 'Minta transfer di luar Miseku, bukan soal meet-up.',
-            'reported_content'    => $spam->message_body,
-            'report_status'       => 'pending',
-        ]);
+        // Lewat service supaya admin juga menerima notifikasi "Laporan komunitas baru"
+        app(CommunityModerationService::class)->report(
+            $b[2], $t2, $spam, 'penipuan', 'Minta transfer di luar Miseku, bukan soal meet-up.'
+        );
     }
 
     /** ------------------------------------------------ chat */

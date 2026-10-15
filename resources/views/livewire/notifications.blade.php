@@ -28,7 +28,6 @@
                     <span class="flex flex-wrap items-center gap-2">
                         <span class="font-bold text-ink-900">{{ $n->title }}</span>
                         <span class="ms-chip ms-chip-muted">{{ \App\Livewire\Notifications::TYPES[$n->notification_type] ?? $n->notification_type }}</span>
-                        @if ($n->email_status)<span class="text-[11px] text-ink-400">email: {{ $n->email_status }}</span>@endif
                     </span>
                     <span class="mt-0.5 block text-sm text-ink-600">{{ $n->body }}</span>
                     <span class="mt-1 block text-xs text-ink-400">{{ $n->created_at->translatedFormat('d M Y H:i') }}</span>
