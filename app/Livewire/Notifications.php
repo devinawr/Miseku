@@ -24,7 +24,7 @@ class Notifications extends Component
     public const TYPES = [
         'semua' => 'Semua', 'order' => 'Pesanan', 'payment' => 'Pembayaran', 'po_settlement' => 'Pelunasan PO',
         'event_pickup' => 'Pick-up event', 'cancellation' => 'Pembatalan', 'custom' => 'Custom', 'design_poll' => 'Voting',
-        'withdrawal' => 'Penarikan', 'attribute' => 'Master data',
+        'withdrawal' => 'Penarikan', 'attribute' => 'Master data', 'community' => 'Komunitas',
     ];
 
     public function updatedJenis(): void

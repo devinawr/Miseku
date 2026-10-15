@@ -13,10 +13,18 @@
         @if ($m->attachedArtist)
             <a href="{{ route('artist.shop', $m->attachedArtist) }}" wire:navigate class="ms-chip mt-2 bg-brand-50 text-brand-700"><x-icon name="store" class="h-3.5 w-3.5" /> {{ $m->attachedArtist->shop_name }}</a>
         @endif
+        {{-- $mode: 'public' (halaman komunitas) atau 'admin' (Panel admin → Komunitas) --}}
+        @php $mode = $mode ?? 'public'; $mine = auth()->id() === $m->user_id; @endphp
         <div class="mt-1 flex gap-3 text-xs font-bold">
-            @if ($role)<button type="button" wire:click="reply({{ $m->id }})" class="text-brand-700 hover:underline">Balas</button>@endif
-            @if ($role === 'moderator' || $m->user_id === auth()->id())
-                <button type="button" wire:click="deleteMessage({{ $m->id }})" wire:confirm="Hapus pesan ini?" class="text-red-600 hover:underline">Hapus</button>
+            @if ($mode === 'admin')
+                <button type="button" wire:click="askDelete('message', {{ $m->id }})" class="text-red-600 hover:underline">Hapus</button>
+            @else
+                @if ($canReply ?? false)<button type="button" wire:click="reply({{ $m->id }})" class="text-brand-700 hover:underline">Balas</button>@endif
+                @if ($mine)
+                    <button type="button" wire:click="deleteMessage({{ $m->id }})" wire:confirm="Hapus pesan ini?" class="text-red-600 hover:underline">Hapus</button>
+                @elseif (auth()->check() && ! auth()->user()->isAdmin())
+                    <button type="button" wire:click="openReport({{ $m->id }})" class="text-ink-400 hover:text-red-600 hover:underline">Laporkan</button>
+                @endif
             @endif
         </div>
     </div>

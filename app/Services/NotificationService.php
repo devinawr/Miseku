@@ -148,6 +148,7 @@ class NotificationService
         return match ($note->notification_type) {
             'withdrawal'  => $viewer->isAdmin() ? route('admin.withdrawals') : route('studio.balance'),
             'attribute'   => $viewer->isAdmin() ? route('admin.approvals') : route('studio.dashboard'),
+            'community'   => $viewer->isAdmin() ? route('admin.community') : route('community'),
             'custom'      => $viewer->isArtist() && ! str_contains($note->title, 'Penawaran') ? route('studio.custom') : route('custom.index'),
             'design_poll' => $viewer->isArtist() && str_contains($note->title, 'Voting kamu') ? route('studio.polls') : route('polls.index'),
             default       => route('notifications'),

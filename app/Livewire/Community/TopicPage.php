@@ -3,19 +3,23 @@
 namespace App\Livewire\Community;
 
 use App\Models\ArtistProfile;
+use App\Models\CommunityReport;
 use App\Models\DiscussionTopic;
 use App\Models\FandomMember;
 use App\Models\Product;
 use App\Models\TopicMessage;
 use App\Livewire\Concerns\HasPhotoAttachments;
+use App\Services\CommunityModerationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
  * Satu topik diskusi: pesan + balasan (1 tingkat), lampirkan produk / artis rekomendasi.
- * Moderator fandom & admin bisa menghapus pesan/topik.
+ * Penulis bisa menghapus pesan/topiknya sendiri; konten orang lain bisa DILAPORKAN
+ * ke admin (Panel admin → Komunitas). Admin dialihkan ke panel, tidak membuka halaman ini.
  */
 #[Layout('components.layouts.app')]
 class TopicPage extends Component
@@ -32,13 +36,17 @@ class TopicPage extends Component
 
     public ?int $attachArtist = null;
 
+    /** Form laporan: null = tertutup, 0 = lapor topik, >0 = id pesan yang dilaporkan. */
+    public ?int $reportTarget = null;
+
+    public string $reportCategory = '';
+
+    public string $reportNote = '';
+
     private function role(): ?string
     {
         if (! Auth::check()) {
             return null;
-        }
-        if (Auth::user()->isAdmin()) {
-            return 'moderator';
         }
 
         return FandomMember::where('fandom_id', $this->topic->fandom_id)->where('user_id', Auth::id())->value('role');
@@ -49,7 +57,7 @@ class TopicPage extends Component
         $this->replyTo = $id;
     }
 
-    /** Admin memantau & memoderasi (hapus), tidak ikut berdiskusi. */
+    /** Hanya anggota komunitas (bukan admin) yang bisa berdiskusi. */
     private function canPost(): bool
     {
         return (bool) $this->role() && ! Auth::user()->isAdmin();
@@ -81,24 +89,69 @@ class TopicPage extends Component
         $this->reset('body', 'replyTo', 'attachProduct', 'attachArtist');
     }
 
+    /** Penulis menghapus pesannya sendiri (foto lampiran ikut terhapus). */
     public function deleteMessage(int $id): void
     {
         $msg = TopicMessage::where('discussion_topic_id', $this->topic->id)->findOrFail($id);
-        abort_unless($this->role() === 'moderator' || $msg->user_id === Auth::id(), 403);
-        TopicMessage::where('parent_message_id', $msg->id)->delete();
-        $msg->delete();
+        abort_unless(Auth::check() && $msg->user_id === Auth::id(), 403);
+        app(CommunityModerationService::class)->deleteMessage($msg);
         $this->dispatch('toast', message: 'Pesan dihapus.');
     }
 
+    /** Pembuat topik menghapus topiknya sendiri. */
     public function deleteTopic(): void
     {
-        abort_unless($this->role() === 'moderator' || $this->topic->creator_id === Auth::id(), 403);
+        abort_unless(Auth::check() && $this->topic->creator_id === Auth::id(), 403);
         $fandomId = $this->topic->fandom_id;
-        TopicMessage::where('discussion_topic_id', $this->topic->id)->whereNotNull('parent_message_id')->delete();
-        TopicMessage::where('discussion_topic_id', $this->topic->id)->delete();
-        $this->topic->delete();
+        app(CommunityModerationService::class)->deleteTopic($this->topic);
         session()->flash('status', 'Topik dihapus.');
         $this->redirectRoute('community.fandom', ['fandom' => $fandomId], navigate: true);
+    }
+
+    /* ---------------------------------------------------------- laporan */
+
+    public function openReport(int $messageId = 0): void
+    {
+        if (! Auth::check()) {
+            $this->redirectRoute('login', navigate: true);
+
+            return;
+        }
+        $this->resetValidation();
+        $this->reset('reportCategory', 'reportNote');
+        $this->reportTarget = $messageId;
+    }
+
+    public function closeReport(): void
+    {
+        $this->reportTarget = null;
+    }
+
+    public function submitReport(): void
+    {
+        abort_unless(Auth::check() && ! Auth::user()->isAdmin() && $this->reportTarget !== null, 403);
+
+        $this->validate([
+            'reportCategory' => ['required', Rule::in(array_keys(CommunityReport::REASONS))],
+            'reportNote'     => [$this->reportCategory === 'lainnya' ? 'required' : 'nullable', 'string', 'max:255'],
+        ], [
+            'reportCategory.required' => 'Pilih alasan laporan.',
+            'reportNote.required'     => 'Jelaskan alasannya.',
+        ]);
+
+        $message = $this->reportTarget ? TopicMessage::where('discussion_topic_id', $this->topic->id)->findOrFail($this->reportTarget) : null;
+        $svc = app(CommunityModerationService::class);
+
+        if ($svc->alreadyReported(Auth::user(), $this->topic, $message)) {
+            $this->reportTarget = null;
+            $this->dispatch('toast', message: 'Kamu sudah melaporkan konten ini. Admin sedang meninjaunya.');
+
+            return;
+        }
+
+        $svc->report(Auth::user(), $this->topic, $message, $this->reportCategory, $this->reportNote ?: null);
+        $this->reportTarget = null;
+        $this->dispatch('toast', message: 'Laporan terkirim. Terima kasih, admin akan meninjaunya.');
     }
 
     public function render()
@@ -108,6 +161,7 @@ class TopicPage extends Component
         return view('livewire.community.topic-page', [
             'role'     => $this->role(),
             'canPost'  => $this->canPost(),
+            'reasons'  => CommunityReport::REASONS,
             'messages' => TopicMessage::where('discussion_topic_id', $topic->id)->whereNull('parent_message_id')
                 ->with(['user', 'images', 'attachedProduct.primaryImage', 'attachedArtist', 'replies' => fn ($q) => $q->orderBy('sent_at')->with(['user', 'images', 'attachedProduct.primaryImage', 'attachedArtist'])])
                 ->orderBy('sent_at')->get(),

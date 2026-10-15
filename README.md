@@ -14,7 +14,7 @@ Yang tidak ikut di zip cuma `vendor/` dan `node_modules/` (install di komputermu
 **Baru di versi ini (hasil konsul):** daftar hanya sebagai pembeli (buka toko dari Akun), halaman **Rekomendasi untukmu** (`/rekomendasi`), **kirim foto** di chat & komunitas, **alamat toko** artis (asal ongkir), stepper pesanan rapi, **mode studio** dengan tombol kembali ke mode pembeli, **panel admin terpisah** (admin tidak bisa belanja), **detail penarikan + alasan ditolak**, palet cepat tema, dan **PWA bisa dipasang**.
 Panduan Midtrans / RajaOngkir / PWA: `docs/PANDUAN_MIDTRANS_RAJAONGKIR_PWA.md`. Rangkuman konsul: `docs/Rangkuman_Konsul.md`.
 
-> **Update DB dari versi sebelumnya:** jalankan `database/sql/PATCH_withdrawal_reason.sql` di phpMyAdmin (menambah kolom `withdrawal.rejection_reason`), atau impor ulang `ERD_FIX_SQL_final.sql` + `php artisan db:seed`. Pastikan `.env` berisi `APP_LOCALE=id` (pesan validasi bahasa Indonesia di `lang/id/validation.php`).
+> **Update DB dari versi sebelumnya (fitur laporan komunitas):** jalankan `database/sql/PATCH_community_report.sql` di tab **SQL** phpMyAdmin (tabel baru `community_report` + tipe notifikasi `community`), atau impor ulang `database/sql/SQL_FIX.sql` (38 tabel) + `php artisan db:seed`. Pastikan `.env` berisi `APP_LOCALE=id` (pesan validasi bahasa Indonesia di `lang/id/validation.php`).
 
 ---
 
@@ -92,7 +92,7 @@ Semua password: **`password`**
 | Artis | `kirara@miseku.test` | pengajuan batal dari Rani, PO Tote Bag (1 menunggu pelunasan, 1 siap kirim), 2 pesanan pick-up Comifuro 20, voting berjalan, penarikan diajukan |
 | Artis | `nakamura@miseku.test` | pesanan dibayar perlu dikirim, **retur** dari Bagas, custom sedang diproduksi, voting selesai → produk PO Art Print Gojo, PO Badge Set gagal target |
 | Artis | `hanabi@miseku.test` | penjualan OTS di booth C-21, penarikan selesai, PO Plushie (DP) |
-| Pembeli | `buyer1@miseku.test` (Devina) | **tema otomatis** dari fandom favorit (Genshin + Project Sekai, bergiliran per hari); semua status: belum bayar, dibayar, dikirim, selesai (bisa ulasan & retur 3 hari), PO DP, **menunggu pelunasan**, **QR pick-up**, custom dengan 2 penawaran, moderator komunitas Genshin, chat dengan Kirara, 2 alamat |
+| Pembeli | `buyer1@miseku.test` (Devina) | **tema otomatis** dari fandom favorit (Genshin + Project Sekai, bergiliran per hari); semua status: belum bayar, dibayar, dikirim, selesai (bisa ulasan & retur 3 hari), PO DP, **menunggu pelunasan**, **QR pick-up**, custom dengan 2 penawaran, anggota komunitas Genshin, chat dengan Kirara, 2 alamat |
 | Pembeli | `buyer2@miseku.test` (Rani) | **tema dipilih sendiri** (Miku Teal · Project Sekai, padahal favoritnya Jujutsu Kaisen); pengajuan pembatalan, PO DP sudah lunas & dikirim, custom sedang diproduksi |
 | Pembeli | `buyer3@miseku.test` (Bagas) | **tema dimatikan** (tampilan default); retur diajukan, QR pick-up (dipakai uji scan), permintaan custom tanpa penawaran |
 | Pembeli | `buyer4@miseku.test` (Nadia) | PO full siap dikirim, PO poster menunggu PO ditutup |
@@ -102,7 +102,7 @@ Semua password: **`password`**
 Isi lain: 3 toko, 25 produk, batch PO (buka/selesai/gagal), ±40 pesanan selesai lengkap dengan
 pembayaran + mutasi saldo (ditahan → dilepas, dipotong admin fee 5% min Rp1.000), ulasan dua arah,
 alamat semua user, 3 event (lalu/berlangsung/akan datang) + booth, 2 voting, 3 permintaan custom,
-komunitas (anggota, moderator, topik, balasan), chat, notifikasi.
+komunitas (anggota, topik, balasan, 1 laporan menunggu), chat, notifikasi.
 
 ---
 
@@ -126,7 +126,7 @@ komunitas (anggota, moderator, topik, balasan), chat, notifikasi.
 10. **Pick-up event**: pesanan *Siap diambil di booth* → QR tampil.
 11. **Custom**: menu Custom → buat permintaan → lihat penawaran → tolak / pilih & checkout.
 12. **Voting**: `/voting` → pilih 1 opsi (1 akun 1 suara).
-13. **Komunitas**: gabung fandom → buat topik → balas → lampirkan produk/artis.
+13. **Komunitas**: gabung fandom → buat topik → balas → lampirkan produk/artis. Hapus pesan/topik milik sendiri; konten orang lain → **Laporkan** (pilih alasan) → masuk antrean admin.
 14. **Chat**: ikon chat di header atau tombol *Chat artis* di produk/pesanan.
 15. **Notifikasi**: lonceng (polling 30 detik) → halaman Notifikasi (filter + *produk baru sesuai minat*).
 16. **Buka toko**: Akun → *Buka toko* → jadi artis.
@@ -154,7 +154,8 @@ komunitas (anggota, moderator, topik, balasan), chat, notifikasi.
 6. **Penarikan dana**: proses → selesai (upload bukti) atau tolak (saldo kembali).
 7. **Event**: tambah/ubah/hapus.
 8. **Tema fandom** (`/admin/tema`): tambah/ubah tema per fandom — warna utama, gradasi, aksen, banner; pratinjau + cek kontras; aktif/nonaktif; hapus.
-9. **Pengaturan & otomasi**: admin fee, minimum fee, penalti; *Hitung ulang semua rating*; otomasi *Jalankan sekarang*.
+9. **Komunitas** (`/admin/komunitas`): tab *Laporan* (menunggu / dihapus / ditolak) → *Hapus konten* (wajib alasan → penulis & pelapor dapat notifikasi, foto ikut terhapus) atau *Tolak laporan*; tab *Semua topik* untuk memantau & menghapus langsung.
+10. **Pengaturan & otomasi**: admin fee, minimum fee, penalti; *Hitung ulang semua rating*; otomasi *Jalankan sekarang*.
 
 ### E. Tema tampilan (theming per fandom)
 1. Masuk `buyer1` → beranda: band tema di bawah banner + seluruh warna (tombol, tautan, gradasi) mengikuti fandom favorit.
@@ -221,7 +222,7 @@ Ulangi langkah 4 untuk kembali ke data awal.
 | Custom | permintaan, penawaran, pilih → checkout, produksi | ✅ |
 | Voting desain | buat, pilih, hasil, PO dari pemenang | ✅ |
 | Event | event (admin), booth (artis), pick-up QR, OTS | ✅ |
-| Komunitas | anggota, moderator, topik, balasan | ✅ |
+| Komunitas | anggota, topik, balasan, laporan & moderasi admin | ✅ |
 | Komunikasi | chat, notifikasi in-app & email | ✅ |
 | Keuangan | saldo ditahan/tersedia, admin fee, tarik dana, mutasi | ✅ |
 | Admin | ringkasan, persetujuan, pengguna, produk, transaksi, refund, penarikan, event, pengaturan | ✅ |

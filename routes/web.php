@@ -89,5 +89,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/penarikan', Livewire\Admin\Withdrawals::class)->name('withdrawals');
     Route::get('/event', Livewire\Admin\Events::class)->name('events');
     Route::get('/tema', Livewire\Admin\Themes::class)->name('themes');
+    Route::get('/komunitas', Livewire\Admin\Community::class)->name('community');
     Route::get('/pengaturan', Livewire\Admin\Settings::class)->name('settings');
 });

@@ -1221,7 +1221,7 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`track_transaksi` (
   `customer_order_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL,
   `title` VARCHAR(150) NOT NULL,
   `body` TEXT NOT NULL,
-  `notification_type` ENUM('order', 'payment', 'po_settlement', 'event_pickup', 'cancellation', 'custom', 'design_poll', 'withdrawal', 'attribute') NOT NULL,
+  `notification_type` ENUM('order', 'payment', 'po_settlement', 'event_pickup', 'cancellation', 'custom', 'design_poll', 'withdrawal', 'attribute', 'community') NOT NULL,
   `is_read` TINYINT(1) NOT NULL DEFAULT 0,
   `email_status` ENUM('pending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
@@ -1241,6 +1241,60 @@ CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`track_transaksi` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB
 AUTO_INCREMENT = 86
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
+-- Table `marketplace_fanmerch`.`community_report`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `marketplace_fanmerch`.`community_report` (
+  `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `reporter_id` BIGINT(20) UNSIGNED NOT NULL COMMENT 'pengguna yang melapor',
+  `reported_user_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL COMMENT 'penulis konten yang dilaporkan',
+  `discussion_topic_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL COMMENT 'topik yang dilaporkan / tempat pesan berada',
+  `topic_message_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL COMMENT 'NULL = yang dilaporkan topiknya',
+  `reason_category` ENUM('spam', 'sara', 'pornografi', 'penipuan', 'pelecehan', 'lainnya') NOT NULL,
+  `reason_note` VARCHAR(255) NULL DEFAULT NULL COMMENT 'keterangan tambahan dari pelapor',
+  `reported_content` TEXT NOT NULL COMMENT 'salinan isi konten saat dilaporkan (tetap ada walau konten dihapus)',
+  `report_status` ENUM('pending', 'removed', 'dismissed') NOT NULL DEFAULT 'pending' COMMENT 'removed = konten dihapus admin, dismissed = laporan ditolak',
+  `handled_by` BIGINT(20) UNSIGNED NULL DEFAULT NULL COMMENT 'admin yang menindaklanjuti',
+  `admin_note` VARCHAR(255) NULL DEFAULT NULL COMMENT 'alasan penghapusan / alasan laporan ditolak',
+  `handled_at` DATETIME NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id`),
+  INDEX `idx_report_status` (`report_status` ASC, `created_at` ASC),
+  INDEX `idx_report_reporter` (`reporter_id` ASC),
+  INDEX `idx_report_reported_user` (`reported_user_id` ASC),
+  INDEX `idx_report_topic` (`discussion_topic_id` ASC),
+  INDEX `idx_report_message` (`topic_message_id` ASC),
+  INDEX `idx_report_handler` (`handled_by` ASC),
+  CONSTRAINT `fk_report_reporter`
+    FOREIGN KEY (`reporter_id`)
+    REFERENCES `marketplace_fanmerch`.`user` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_report_reported_user`
+    FOREIGN KEY (`reported_user_id`)
+    REFERENCES `marketplace_fanmerch`.`user` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_report_topic`
+    FOREIGN KEY (`discussion_topic_id`)
+    REFERENCES `marketplace_fanmerch`.`discussion_topic` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_report_message`
+    FOREIGN KEY (`topic_message_id`)
+    REFERENCES `marketplace_fanmerch`.`topic_message` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_report_handler`
+    FOREIGN KEY (`handled_by`)
+    REFERENCES `marketplace_fanmerch`.`user` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE)
+ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci;
 

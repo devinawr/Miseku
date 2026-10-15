@@ -40,6 +40,7 @@ class Dashboard extends Component
                 ['Usulan master data', Fandom::where('status', 'pending')->count() + FandomCharacter::where('status', 'pending')->count() + MerchandiseType::where('status', 'pending')->count(), route('admin.approvals')],
                 ['Penarikan dana menunggu', Withdrawal::whereIn('withdrawal_status', ['submitted', 'processing'])->count(), route('admin.withdrawals')],
                 ['Refund manual menunggu', Payment::where('payment_type', 'refund')->where('payment_status', 'pending')->count(), route('admin.transactions', ['tab' => 'refund'])],
+                ['Laporan komunitas', \App\Models\CommunityReport::where('report_status', 'pending')->count(), route('admin.community')],
                 ['Tagihan pending', Payment::where('payment_type', '!=', 'refund')->where('payment_status', 'pending')->count(), route('admin.transactions', ['tab' => 'pembayaran'])],
             ],
             'activity' => TrackTransaksi::with('user')->latest('id')->take(12)->get(),

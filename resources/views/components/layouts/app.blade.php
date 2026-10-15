@@ -146,7 +146,7 @@
                                     <a href="{{ route('admin.dashboard') }}" wire:navigate class="{{ $item }}"><x-icon name="chart" class="h-4.5 w-4.5" /> Panel admin</a>
                                     <a href="{{ route('admin.approvals') }}" wire:navigate class="{{ $item }}"><x-icon name="check-circle" class="h-4.5 w-4.5" /> Persetujuan master data</a>
                                     <a href="{{ route('admin.themes') }}" wire:navigate class="{{ $item }}"><x-icon name="palette" class="h-4.5 w-4.5" /> Kelola tema fandom</a>
-                                    <a href="{{ route('community') }}" wire:navigate class="{{ $item }}"><x-icon name="chat" class="h-4.5 w-4.5" /> Pantau komunitas</a>
+                                    <a href="{{ route('admin.community') }}" wire:navigate class="{{ $item }}"><x-icon name="chat" class="h-4.5 w-4.5" /> Komunitas & laporan</a>
                                 @endif
                             </nav>
                             <form method="POST" action="{{ route('logout') }}" class="border-t border-ink-100">
@@ -223,7 +223,7 @@
                         $mobile[] = ['Buka toko', route('account', ['tab' => 'toko'])];
                     }
                     if ($me->isAdmin()) {
-                        $mobile = array_merge($mobile, [['Panel admin', route('admin.dashboard')], ['Persetujuan master data', route('admin.approvals')], ['Kelola tema fandom', route('admin.themes')], ['Pantau komunitas', route('community')]]);
+                        $mobile = array_merge($mobile, [['Panel admin', route('admin.dashboard')], ['Persetujuan master data', route('admin.approvals')], ['Kelola tema fandom', route('admin.themes')], ['Komunitas & laporan', route('admin.community')]]);
                     }
                 @endphp
                 @foreach ($mobile as [$label, $href])
