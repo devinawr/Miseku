@@ -10,7 +10,11 @@
 <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     {{-- Kartu identitas --}}
     <div class="ms-card relative overflow-hidden">
-        <div class="ms-gradient relative h-24 sm:h-28"><div class="ms-dots absolute inset-0"></div></div>
+        @if ($shopBanner)
+            <div class="relative h-24 sm:h-28"><img src="{{ $shopBanner->url }}" alt="" class="h-full w-full object-cover"></div>
+        @else
+            <div class="ms-gradient relative h-24 sm:h-28"><div class="ms-dots absolute inset-0"></div></div>
+        @endif
         <div class="flex flex-wrap items-end gap-4 px-5 pb-5 sm:px-6">
             <x-avatar :user="$user" class="relative z-10 -mt-10 h-20 w-20 shrink-0 text-2xl ring-4 ring-white" />
             <div class="min-w-0 flex-1 pt-2">
@@ -44,18 +48,18 @@
         @if ($tab === 'profil')
             <form wire:submit="saveProfile" class="ms-card grid gap-6 p-5 sm:p-6 md:grid-cols-[180px_1fr]">
                 <div class="flex flex-col items-center gap-3">
-                    @if ($photo && ! $errors->has('photo'))
-                        <img src="{{ $photo->temporaryUrl() }}" alt="" class="h-28 w-28 rounded-full object-cover">
-                    @else
+                    <div class="relative">
                         <x-avatar :user="$user" class="h-28 w-28 text-4xl" />
-                    @endif
+                        <div wire:loading.flex wire:target="photo,removePhoto" class="absolute inset-0 items-center justify-center rounded-full bg-white/70 text-xs font-bold text-brand-700">Memproses…</div>
+                    </div>
                     <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
-                        <x-icon name="photo" class="h-4 w-4" /> Ganti foto
+                        <x-icon name="photo" class="h-4 w-4" /> {{ $user->profile_photo ? 'Ganti foto' : 'Unggah foto' }}
                         <input type="file" wire:model="photo" accept="image/jpeg,image/png,image/webp" class="sr-only">
                     </label>
-                    @if ($user->profile_photo && ! $photo)
-                        <button type="button" wire:click="removePhoto" class="text-xs font-bold text-ink-500 hover:text-red-600">Hapus foto</button>
+                    @if ($user->profile_photo)
+                        <button type="button" wire:click="removePhoto" wire:confirm="Hapus foto profil?" class="inline-flex items-center gap-1 text-xs font-bold text-ink-500 hover:text-red-600"><x-icon name="trash" class="h-3.5 w-3.5" /> Hapus foto</button>
                     @endif
+                    <p class="text-center text-[11px] text-ink-400">JPG, PNG, atau WEBP · maks. 2 MB.<br>Langsung tersimpan setelah dipilih.</p>
                     @error('photo') <p class="ms-error text-center">{{ $message }}</p> @enderror
                 </div>
 
@@ -75,7 +79,7 @@
                         <input id="phone" type="tel" wire:model="phone" class="ms-input" placeholder="08xxxxxxxxxx">
                         @error('phone') <p class="ms-error">{{ $message }}</p> @enderror
                     </div>
-                    <button type="submit" class="ms-btn-primary" wire:loading.attr="disabled" wire:target="saveProfile,photo">Simpan profil</button>
+                    <button type="submit" class="ms-btn-primary" wire:loading.attr="disabled" wire:target="saveProfile">Simpan profil</button>
                 </div>
             </form>
         @endif
@@ -256,6 +260,34 @@
         @endif
 
         @if ($tab === 'toko' && ! $user->isAdmin())
+            @if ($user->artistProfile)
+                {{-- Banner toko: tampil di halaman toko publik --}}
+                <div class="ms-card mb-5 max-w-2xl space-y-3 p-5 sm:p-6">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-ink-900">Banner toko</h2>
+                        <p class="text-sm text-ink-500">Tampil di bagian atas halaman tokomu. Disarankan 1500×500 piksel (rasio 3:1), JPG/PNG/WEBP maks. 3 MB.</p>
+                    </div>
+                    <div class="relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-ink-100">
+                        @if ($shopBanner)
+                            <img src="{{ $shopBanner->url }}" alt="Banner {{ $user->artistProfile->shop_name }}" class="h-full w-full object-cover">
+                        @else
+                            <div class="ms-gradient flex h-full w-full items-center justify-center"><span class="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-ink-600">Belum ada banner — toko memakai banner bawaan</span></div>
+                        @endif
+                        <div wire:loading.flex wire:target="banner,removeBanner" class="absolute inset-0 items-center justify-center bg-white/70 text-sm font-bold text-brand-700">Memproses…</div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
+                            <x-icon name="photo" class="h-4 w-4" /> {{ $shopBanner ? 'Ganti banner' : 'Unggah banner' }}
+                            <input type="file" wire:model="banner" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                        </label>
+                        @if ($shopBanner)
+                            <button type="button" wire:click="removeBanner" wire:confirm="Hapus banner toko? Toko akan memakai banner bawaan." class="ms-btn-ghost !py-1.5 text-xs text-red-600"><x-icon name="trash" class="h-4 w-4" /> Hapus banner</button>
+                        @endif
+                        <a href="{{ route('artist.shop', $user->artistProfile) }}" wire:navigate class="ms-btn-ghost !py-1.5 text-xs">Lihat halaman toko</a>
+                    </div>
+                    @error('banner') <p class="ms-error">{{ $message }}</p> @enderror
+                </div>
+            @endif
             <form wire:submit="saveShop" class="ms-card max-w-2xl space-y-4 p-5 sm:p-6">
                 <div>
                     <h2 class="text-lg font-extrabold text-ink-900">{{ $user->artistProfile ? 'Toko saya' : 'Buka toko di Miseku' }}</h2>

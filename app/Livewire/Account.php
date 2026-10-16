@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Address;
 use App\Models\ArtistProfile;
 use App\Models\Fandom;
+use App\Models\FileUpload;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Services\ContentBasedRecommender;
@@ -24,12 +25,12 @@ use Livewire\WithFileUploads;
 
 /**
  * Akun saya — 7 tab:
- *  profil     : nama, no. HP, foto profil
+ *  profil     : nama, no. HP, foto profil (unggah / ganti / hapus — semua peran)
  *  keamanan   : ganti kata sandi
  *  fandom     : kelola fandom favorit (favorite_fandom)
  *  aktivitas  : produk terakhir dilihat + profil minat CBF (transparansi rekomendasi)
  *  alamat     : buku alamat pengiriman (kota RajaOngkir / daftar lokal)
- *  toko       : buka toko (pembeli → artis) / ubah nama toko & rekening pencairan
+ *  toko       : buka toko (pembeli → artis) / ubah nama toko & rekening pencairan, banner toko (unggah / ganti / hapus)
  *  tampilan   : tema fandom (otomatis / pilih sendiri / matikan) → komponen ThemePicker
  */
 #[Layout('components.layouts.app')]
@@ -45,6 +46,9 @@ class Account extends Component
     public string $name = '';
     public string $phone = '';
     public $photo = null;
+
+    // banner toko (khusus artis)
+    public $banner = null;
 
     // keamanan
     public string $current_password = '';
@@ -115,9 +119,20 @@ class Account extends Component
 
     // ---------- Profil ----------
 
+    /** Foto langsung disimpan begitu dipilih (unggah baru atau ganti), tanpa perlu klik Simpan profil. */
     public function updatedPhoto(): void
     {
         $this->validate(['photo' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048']], [], ['photo' => 'foto profil']);
+
+        $user = Auth::user();
+        $had = (bool) $user->profile_photo;
+        $old = $user->profile_photo;
+        $user->update(['profile_photo' => '/uploads/' . $this->photo->store('avatars', 'uploads')]);
+        $this->deleteOwnPhoto($old);
+
+        $this->photo = null;
+        unset($this->user);
+        $this->dispatch('toast', message: $had ? 'Foto profil diganti.' : 'Foto profil diunggah.');
     }
 
     public function saveProfile(): void
@@ -125,19 +140,9 @@ class Account extends Component
         $data = $this->validate([
             'name'  => ['required', 'string', 'min:3', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]{8,20}$/'],
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ], ['phone.regex' => 'Nomor HP hanya boleh angka (8–20 digit).'], ['name' => 'nama', 'phone' => 'nomor HP', 'photo' => 'foto profil']);
+        ], ['phone.regex' => 'Nomor HP hanya boleh angka (8–20 digit).'], ['name' => 'nama', 'phone' => 'nomor HP']);
 
-        $user = Auth::user();
-        $values = ['name' => trim($data['name']), 'phone' => $data['phone'] ?: null];
-
-        if ($this->photo) {
-            $this->deleteOwnPhoto($user->profile_photo);
-            $values['profile_photo'] = '/uploads/' . $this->photo->store('avatars', 'uploads');
-        }
-
-        $user->update($values);
-        $this->photo = null;
+        Auth::user()->update(['name' => trim($data['name']), 'phone' => $data['phone'] ?: null]);
         unset($this->user);
         $this->dispatch('toast', message: 'Profil disimpan.');
     }
@@ -145,9 +150,13 @@ class Account extends Component
     public function removePhoto(): void
     {
         $user = Auth::user();
+        if (! $user->profile_photo) {
+            return;
+        }
         $this->deleteOwnPhoto($user->profile_photo);
         $user->update(['profile_photo' => null]);
         unset($this->user);
+        $this->dispatch('toast', message: 'Foto profil dihapus.');
     }
 
     private function deleteOwnPhoto(?string $url): void
@@ -361,6 +370,59 @@ class Account extends Component
 
     // ---------- Toko ----------
 
+    /**
+     * Banner toko disimpan di file_upload (source_table = 'artist_profile', source_id = id toko).
+     * Unggah / ganti langsung tersimpan begitu file dipilih; file lama di public/uploads ikut dihapus.
+     */
+    public function updatedBanner(): void
+    {
+        $shop = Auth::user()->artistProfile;
+        abort_unless($shop, 403);
+
+        $this->validate(['banner' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:3072', 'dimensions:min_width=800,min_height=200']], [
+            'banner.dimensions' => 'Ukuran banner minimal 800×200 piksel (disarankan 1500×500).',
+        ], ['banner' => 'banner toko']);
+
+        $url = '/uploads/' . $this->banner->store('banners', 'uploads');
+        $current = $this->shopBanner($shop);
+
+        if ($current) {
+            $old = $current->url;
+            $current->update(['url' => $url, 'uploaded_by' => Auth::id()]);
+            $this->deleteOwnPhoto($old);
+        } else {
+            FileUpload::create([
+                'url' => $url, 'source_table' => 'artist_profile', 'source_id' => $shop->id,
+                'uploaded_by' => Auth::id(), 'sort_order' => 1,
+            ]);
+        }
+
+        $this->banner = null;
+        unset($this->user);
+        $this->dispatch('toast', message: $current ? 'Banner toko diganti.' : 'Banner toko diunggah.');
+    }
+
+    public function removeBanner(): void
+    {
+        $shop = Auth::user()->artistProfile;
+        abort_unless($shop, 403);
+
+        FileUpload::where('source_table', 'artist_profile')->where('source_id', $shop->id)->get()
+            ->each(function (FileUpload $f) {
+                $this->deleteOwnPhoto($f->url);
+                $f->delete();
+            });
+
+        unset($this->user);
+        $this->dispatch('toast', message: 'Banner toko dihapus. Toko memakai banner bawaan.');
+    }
+
+    private function shopBanner(?ArtistProfile $shop): ?FileUpload
+    {
+        return $shop ? FileUpload::where('source_table', 'artist_profile')->where('source_id', $shop->id)->orderBy('sort_order')->first() : null;
+    }
+
+
     public function saveShop(): void
     {
         $user = Auth::user();
@@ -414,6 +476,8 @@ class Account extends Component
 
     public function render()
     {
-        return view('livewire.account');
+        return view('livewire.account', [
+            'shopBanner' => $this->shopBanner(Auth::user()->artistProfile),
+        ]);
     }
 }
