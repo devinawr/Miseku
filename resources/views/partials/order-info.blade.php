@@ -46,7 +46,7 @@
         <div class="px-5 py-4 text-sm">
             <p class="font-bold text-ink-900">{{ $r->design_character }} · {{ $r->merchandiseType?->type_name }} · {{ $r->quantity }} pcs</p>
             <p class="mt-1 whitespace-pre-line text-ink-600">{{ $r->specification }}</p>
-            <a href="{{ route('custom.show', $r) }}" wire:navigate class="ms-link mt-2 text-sm">Lihat permintaan custom</a>
+            <a href="{{ $o->buyer_id === auth()->id() ? route('custom.show', $r) : route('studio.custom.show', $r) }}" wire:navigate class="ms-link mt-2 text-sm">Lihat permintaan custom</a>
         </div>
     @endif
     <ul class="divide-y divide-ink-100">

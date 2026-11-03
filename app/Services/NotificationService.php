@@ -149,7 +149,10 @@ class NotificationService
             'withdrawal'  => $viewer->isAdmin() ? route('admin.withdrawals') : route('studio.balance'),
             'attribute'   => $viewer->isAdmin() ? route('admin.approvals') : route('studio.dashboard'),
             'community'   => $viewer->isAdmin() ? route('admin.community') : route('community'),
-            'custom'      => $viewer->isArtist() && ! str_contains($note->title, 'Penawaran') ? route('studio.custom') : route('custom.index'),
+            // Notifikasi untuk artis (permintaan baru, penawaranku ditolak / tidak dipilih) → Studio; sisanya untuk pembeli.
+            'custom'      => $viewer->isArtist() && in_array($note->title, ['Permintaan custom baru', 'Penawaran custom ditolak', 'Penawaran custom tidak dipilih'], true)
+                ? route('studio.custom', str_contains($note->title, 'Permintaan') ? [] : ['tab' => 'penawaran'])
+                : route('custom.index'),
             'design_poll' => $viewer->isArtist() && str_contains($note->title, 'Voting kamu') ? route('studio.polls') : route('polls.index'),
             default       => route('notifications'),
         };

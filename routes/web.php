@@ -72,6 +72,7 @@ Route::middleware(['auth', 'role:artist'])->prefix('studio')->name('studio.')->g
     Route::get('/pesanan/{order}', Livewire\Studio\OrderShow::class)->name('orders.show');
     Route::get('/batch-po', Livewire\Studio\Batches::class)->name('batches');
     Route::get('/custom', Livewire\Studio\CustomRequests::class)->name('custom');
+    Route::get('/custom/{customRequest}', Livewire\Custom\Show::class)->name('custom.show');
     Route::get('/voting', Livewire\Studio\Polls::class)->name('polls');
     Route::get('/event', Livewire\Studio\Events::class)->name('events');
     Route::get('/scan', Livewire\Studio\Scan::class)->name('scan');

@@ -10,7 +10,7 @@
     @if ($tab === 'terbuka')
         <div class="grid gap-4 md:grid-cols-2">
             @forelse ($open as $r)
-                <a href="{{ route('custom.show', $r) }}" wire:navigate class="ms-card block p-5 hover:border-brand-300" wire:key="r-{{ $r->id }}">
+                <a href="{{ route('studio.custom.show', $r) }}" wire:navigate class="ms-card block p-5 hover:border-brand-300" wire:key="r-{{ $r->id }}">
                     <div class="flex items-center gap-2">
                         <p class="font-bold text-ink-900">{{ $r->design_character }}</p>
                         @if ($r->mine)<span class="ms-chip ms-chip-ready ml-auto">Sudah kamu tawar</span>@endif
@@ -26,7 +26,7 @@
     @else
         <div class="ms-card divide-y divide-ink-100">
             @forelse ($offers as $of)
-                <a href="{{ route('custom.show', $of->custom_request_id) }}" wire:navigate class="flex flex-wrap items-center gap-3 px-5 py-4 hover:bg-brand-50" wire:key="of-{{ $of->id }}">
+                <a href="{{ route('studio.custom.show', $of->custom_request_id) }}" wire:navigate class="flex flex-wrap items-center gap-3 px-5 py-4 hover:bg-brand-50" wire:key="of-{{ $of->id }}">
                     <div class="min-w-0 flex-1">
                         <p class="font-bold text-ink-900">{{ $of->request->design_character }} · {{ $of->request->merchandiseType?->type_name }}</p>
                         <p class="text-sm text-ink-500"><x-rupiah :value="$of->offer_price" /> · {{ $of->estimated_days }} hari · {{ $of->created_at->translatedFormat('d M Y') }}</p>

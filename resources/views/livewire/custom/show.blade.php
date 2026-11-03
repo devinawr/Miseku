@@ -1,7 +1,8 @@
-<div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+<div @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-5xl' => ! $studio])>
+    @if ($studio)<x-studio-nav />@endif
     <x-page-title :title="'Custom: ' . $r->design_character" :subtitle="($r->merchandiseType?->type_name) . ' · ' . $r->quantity . ' pcs · diajukan ' . $r->created_at->translatedFormat('d M Y')">
         <span class="ms-chip ms-chip-muted !px-3 !py-1.5 text-sm">{{ $r->status_label }}</span>
-        <a href="{{ $isOwner ? route('custom.index') : route('studio.custom') }}" wire:navigate class="ms-btn-ghost"><x-icon name="chevron-left" class="h-4 w-4" /> Kembali</a>
+        <a href="{{ $isOwner ? route('custom.index') : ($studio ? route('studio.custom', ['tab' => $myOffer ? 'penawaran' : 'terbuka']) : route('custom.index')) }}" wire:navigate class="ms-btn-ghost"><x-icon name="chevron-left" class="h-4 w-4" /> Kembali</a>
     </x-page-title>
 
     <div class="grid items-start gap-6 lg:grid-cols-12">
@@ -22,18 +23,29 @@
         </section>
 
         <div class="space-y-4 lg:col-span-7">
-            {{-- Form penawaran artis --}}
-            @if ($profile && ! $isOwner && in_array($r->request_status, ['open', 'offered'], true) && ! ($myOffer && $myOffer->offer_status === 'pending'))
-                <form wire:submit="submitOffer" class="ms-card space-y-3 p-5">
-                    <h2 class="font-extrabold text-ink-900">Beri penawaran</h2>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="block"><span class="ms-label">Harga total (Rp)</span><input type="number" step="1000" wire:model="offer_price" class="ms-input">@error('offer_price')<p class="ms-error">{{ $message }}</p>@enderror</label>
-                        <label class="block"><span class="ms-label">Estimasi pengerjaan (hari)</span><input type="number" wire:model="estimated_days" class="ms-input">@error('estimated_days')<p class="ms-error">{{ $message }}</p>@enderror</label>
+            {{-- Form penawaran artis: kirim baru / kirim lagi setelah ditarik / ubah selama menunggu jawaban --}}
+            @if ($profile && ! $isOwner && in_array($r->request_status, ['open', 'offered'], true))
+                @if ($myOffer?->offer_status === 'rejected')
+                    <div class="ms-card flex items-start gap-3 p-5 text-sm text-ink-600">
+                        <x-icon name="info" class="mt-0.5 h-5 w-5 shrink-0 text-ink-400" />
+                        <p>Penawaranmu <b class="text-ink-800">ditolak</b> pembeli, jadi kamu tidak bisa menawar lagi untuk permintaan ini. Kalau masih ingin diskusi, pakai <b>Chat pembeli</b> — pembeli bisa membuat permintaan baru.</p>
                     </div>
-                    <textarea wire:model="note" rows="3" class="ms-input" placeholder="Catatan (bahan, revisi, dll.)"></textarea>
-                    <p class="ms-hint">Harga sudah termasuk semua pcs (ongkir dihitung saat checkout). Pembeli membayar penuh di muka.</p>
-                    <button type="submit" class="ms-btn-primary w-full">Kirim penawaran</button>
-                </form>
+                @elseif (! $myOffer || $myOffer->offer_status === 'cancelled' || $editing)
+                    <form wire:submit="submitOffer" class="ms-card space-y-3 p-5">
+                        <h2 class="font-extrabold text-ink-900">{{ $editing ? 'Ubah penawaran' : ($myOffer ? 'Kirim penawaran lagi' : 'Beri penawaran') }}</h2>
+                        @if ($editing)<p class="ms-hint !mt-0">Misalnya setelah diskusi di chat harga disepakati turun. Pembeli akan menerima notifikasi perubahan.</p>@endif
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label class="block"><span class="ms-label">Harga total (Rp)</span><input type="number" step="1000" wire:model="offer_price" class="ms-input">@error('offer_price')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                            <label class="block"><span class="ms-label">Estimasi pengerjaan (hari)</span><input type="number" wire:model="estimated_days" class="ms-input">@error('estimated_days')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                        </div>
+                        <textarea wire:model="note" rows="3" class="ms-input" placeholder="Catatan (bahan, revisi, dll.)"></textarea>
+                        <p class="ms-hint">Harga sudah termasuk semua pcs (ongkir dihitung saat checkout). Pembeli membayar penuh di muka.</p>
+                        <div class="flex gap-2">
+                            @if ($editing)<button type="button" wire:click="cancelEdit" class="ms-btn-ghost flex-1">Batal</button>@endif
+                            <button type="submit" class="ms-btn-primary flex-1">{{ $editing ? 'Simpan perubahan' : 'Kirim penawaran' }}</button>
+                        </div>
+                    </form>
+                @endif
             @endif
 
             <h2 class="ms-section-title">Penawaran ({{ $offers->count() }})</h2>
@@ -55,7 +67,10 @@
                             @endif
                         @elseif ($profile && $of->artist_profile_id === $profile->id)
                             <a href="{{ route('chat', ['with' => $r->buyer_id, 'custom' => $r->id]) }}" wire:navigate class="ms-btn-ghost"><x-icon name="chat" class="h-4.5 w-4.5" /> Chat pembeli</a>
-                            @if ($of->offer_status === 'pending')<button type="button" wire:click="withdrawOffer({{ $of->id }})" class="ms-btn-ghost">Tarik penawaran</button>@endif
+                            @if ($of->offer_status === 'pending' && in_array($r->request_status, ['open', 'offered'], true))
+                                @unless ($editing)<button type="button" wire:click="editOffer" class="ms-btn-soft">Ubah penawaran</button>@endunless
+                                <button type="button" wire:click="withdrawOffer({{ $of->id }})" wire:confirm="Tarik penawaran ini?" class="ms-btn-ghost">Tarik penawaran</button>
+                            @endif
                         @endif
                     </div>
                 </div>
