@@ -1,4 +1,6 @@
-<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+@php $studio = \App\Support\StudioMode::active(); $myShopId = $me->artistProfile?->id; @endphp
+<div @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-6xl' => ! $studio])>
+    @if ($studio)<x-studio-nav />@endif
     <x-page-title title="Chat" subtitle="Tanya stok, diskusi custom, atau koordinasi pesanan langsung dengan artis/pembeli." />
 
     <div class="ms-card grid min-h-[32rem] overflow-hidden md:grid-cols-[18rem_1fr]">
@@ -45,11 +47,24 @@
                         <div class="flex {{ $own ? 'justify-end' : 'justify-start' }}" wire:key="m-{{ $m->id }}">
                             <div class="max-w-[80%] rounded-2xl px-4 py-2 text-sm {{ $own ? 'bg-brand-600 text-white' : 'bg-white text-ink-800 ring-1 ring-ink-200' }}">
                                 @if ($m->product || $m->order || $m->customRequest)
-                                    <p class="mb-1 text-[11px] font-bold {{ $own ? 'text-white/80' : 'text-brand-700' }}">
-                                        @if ($m->product) 🛍 {{ $m->product->product_name }} @endif
-                                        @if ($m->order) 📦 {{ $m->order->order_code }} @endif
-                                        @if ($m->customRequest) ✏️ Custom: {{ $m->customRequest->design_character }} @endif
-                                    </p>
+                                    @php
+                                        // Label konteks bisa diklik. Milik toko sendiri → halaman Studio; selain itu → halaman pembeli.
+                                        $tagCls = 'mb-1 block text-[11px] font-bold underline-offset-2 hover:underline ' . ($own ? 'text-white/85' : 'text-brand-700');
+                                        $tags = [];
+                                        if ($m->product) {
+                                            $mine = $myShopId && $m->product->artist_profile_id === $myShopId;
+                                            $tags[] = ['🛍 ' . $m->product->product_name, $mine && $studio ? route('studio.product.edit', $m->product_id) : route('product.detail', $m->product_id)];
+                                        }
+                                        if ($m->order) {
+                                            $tags[] = ['📦 ' . $m->order->order_code, $m->order->buyer_id === $me->id ? route('orders.show', $m->order) : route('studio.orders.show', $m->order)];
+                                        }
+                                        if ($m->customRequest) {
+                                            $tags[] = ['✏️ Custom: ' . $m->customRequest->design_character, $m->customRequest->buyer_id === $me->id ? route('custom.show', $m->customRequest) : route('studio.custom.show', $m->customRequest)];
+                                        }
+                                    @endphp
+                                    @foreach ($tags as [$label, $href])
+                                        <a href="{{ $href }}" wire:navigate class="{{ $tagCls }}" title="Buka">{{ $label }} ›</a>
+                                    @endforeach
                                 @endif
                                 <x-message-photos :images="$m->images" />
                                 @if ($m->message_body !== '')<p class="whitespace-pre-line {{ $m->images->isNotEmpty() ? 'mt-1.5' : '' }}">{{ $m->message_body }}</p>@endif

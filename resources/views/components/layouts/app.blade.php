@@ -4,7 +4,8 @@
     $focus = request()->routeIs('onboarding');
     // Admin = hanya panel admin (tanpa beranda/belanja). Studio = mode kerja artis (navigasi belanja disembunyikan).
     $isAdmin  = (bool) $me?->isAdmin();
-    $isStudio = request()->routeIs('studio.*');
+    // Studio juga berlaku di chat / notifikasi / akun bila dibuka dari Studio (lihat App\Support\StudioMode)
+    $isStudio = \App\Support\StudioMode::active();
     $themeColor = app(\App\Services\ThemeService::class)->current()['theme']?->primary_color ?? '#7C3AED';
     $item  = 'flex items-center gap-2.5 px-4 py-2 hover:bg-brand-50 hover:text-brand-700';
 @endphp
@@ -113,13 +114,14 @@
                             </div>
                             <nav class="py-1.5 text-sm font-semibold text-ink-700">
                                 <a href="{{ route('account') }}" wire:navigate class="{{ $item }}"><x-icon name="user" class="h-4.5 w-4.5" /> Akun saya</a>
-                                @unless ($me->isAdmin())
+                                {{-- Menu belanja disembunyikan di mode Studio supaya tidak campur --}}
+                                @unless ($me->isAdmin() || $isStudio)
                                     <a href="{{ route('orders.index') }}" wire:navigate class="{{ $item }}"><x-icon name="receipt" class="h-4.5 w-4.5" /> Pesanan saya</a>
                                     <a href="{{ route('custom.index') }}" wire:navigate class="{{ $item }}"><x-icon name="sparkles" class="h-4.5 w-4.5" /> Custom order</a>
                                 @endunless
                                 <a href="{{ route('chat') }}" wire:navigate class="{{ $item }}"><x-icon name="chat" class="h-4.5 w-4.5" /> Chat</a>
                                 <a href="{{ route('notifications') }}" wire:navigate class="{{ $item }}"><x-icon name="bell" class="h-4.5 w-4.5" /> Notifikasi</a>
-                                @unless ($isAdmin)
+                                @unless ($isAdmin || $isStudio)
                                     <a href="{{ route('account', ['tab' => 'fandom']) }}" wire:navigate class="{{ $item }}"><x-icon name="heart" class="h-4.5 w-4.5" /> Fandom favorit</a>
                                     <a href="{{ route('account', ['tab' => 'alamat']) }}" wire:navigate class="{{ $item }}"><x-icon name="map-pin" class="h-4.5 w-4.5" /> Alamat</a>
                                 @endunless
@@ -135,6 +137,7 @@
                                     <a href="{{ route('studio.dashboard') }}" wire:navigate class="{{ $item }}"><x-icon name="squares" class="h-4.5 w-4.5" /> Studio produk</a>
                                     <a href="{{ route('studio.orders') }}" wire:navigate class="{{ $item }}"><x-icon name="box" class="h-4.5 w-4.5" /> Pesanan toko</a>
                                     <a href="{{ route('studio.balance') }}" wire:navigate class="{{ $item }}"><x-icon name="wallet" class="h-4.5 w-4.5" /> Saldo</a>
+                                    <a href="{{ route('account', ['tab' => 'toko']) }}" wire:navigate class="{{ $item }}"><x-icon name="store" class="h-4.5 w-4.5" /> Pengaturan toko</a>
                                     <a href="{{ route('artist.shop', $me->artistProfile) }}" wire:navigate class="{{ $item }}"><x-icon name="store" class="h-4.5 w-4.5" /> Halaman toko saya</a>
                                 @elseif ($me->role === 'buyer')
                                     <div class="my-1.5 border-t border-ink-100"></div>
@@ -216,7 +219,7 @@
                 @php
                     $mobile = [['Akun saya', route('account')], ['Chat', route('chat')], ['Notifikasi', route('notifications')], ['Tema tampilan', route('account', ['tab' => 'tampilan'])]];
                     if ($isStudio) { array_unshift($mobile, ['← Beranda (mode pembeli)', route('home')]); }
-                    if (! $me->isAdmin()) { array_splice($mobile, 1, 0, [['Pesanan saya', route('orders.index')], ['Custom order', route('custom.index')]]); }
+                    if (! $me->isAdmin() && ! $isStudio) { array_splice($mobile, 1, 0, [['Pesanan saya', route('orders.index')], ['Custom order', route('custom.index')]]); }
                     if ($me->isArtist() && $me->artistProfile) {
                         $mobile = array_merge($mobile, [['Studio produk', route('studio.dashboard')], ['Pesanan toko', route('studio.orders')], ['Saldo', route('studio.balance')], ['Halaman toko saya', route('artist.shop', $me->artistProfile)]]);
                     } elseif ($me->role === 'buyer') {

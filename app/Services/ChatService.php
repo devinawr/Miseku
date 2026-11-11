@@ -47,7 +47,7 @@ class ChatService
     public function thread(User $me, int $partnerId): Collection
     {
         return ChatMessage::query()
-            ->with(['images', 'product:id,product_name', 'order:id,order_code', 'customRequest:id,design_character'])
+            ->with(['images', 'product:id,product_name,artist_profile_id', 'order:id,order_code,buyer_id,artist_profile_id', 'customRequest:id,design_character,buyer_id'])
             ->where(fn ($q) => $q->where('sender_id', $me->id)->where('receiver_id', $partnerId))
             ->orWhere(fn ($q) => $q->where('sender_id', $partnerId)->where('receiver_id', $me->id))
             ->orderBy('sent_at')->orderBy('id')

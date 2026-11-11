@@ -34,6 +34,7 @@
 @endif
 
 {{-- Item --}}
+@php $sellerView = auth()->user()?->artistProfile?->id === $o->artist_profile_id; // artis pemilik toko → tautan ke Studio @endphp
 <section class="ms-card overflow-hidden">
     <header class="flex flex-wrap items-center gap-2 border-b border-ink-100 px-5 py-3.5">
         <x-icon name="store" class="h-4.5 w-4.5 text-brand-600" />
@@ -46,7 +47,7 @@
         <div class="px-5 py-4 text-sm">
             <p class="font-bold text-ink-900">{{ $r->design_character }} · {{ $r->merchandiseType?->type_name }} · {{ $r->quantity }} pcs</p>
             <p class="mt-1 whitespace-pre-line text-ink-600">{{ $r->specification }}</p>
-            <a href="{{ $o->buyer_id === auth()->id() ? route('custom.show', $r) : route('studio.custom.show', $r) }}" wire:navigate class="ms-link mt-2 text-sm">Lihat permintaan custom</a>
+            <a href="{{ $sellerView ? route('studio.custom.show', $r) : route('custom.show', $r) }}" wire:navigate class="ms-link mt-2 text-sm">Lihat permintaan custom</a>
         </div>
     @endif
     <ul class="divide-y divide-ink-100">
@@ -54,7 +55,7 @@
             <li class="flex gap-3 px-5 py-3.5" wire:key="it-{{ $item->id }}">
                 <img src="{{ $item->product?->cover_url }}" class="h-16 w-16 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
                 <div class="min-w-0 flex-1">
-                    <a href="{{ route('product.detail', $item->product_id) }}" wire:navigate class="font-bold text-ink-900 hover:text-brand-700">{{ $item->product?->product_name }}</a>
+                    <a href="{{ $sellerView && $item->product ? route('studio.product.edit', $item->product_id) : route('product.detail', $item->product_id) }}" wire:navigate class="font-bold text-ink-900 hover:text-brand-700">{{ $item->product?->product_name }}</a>
                     <p class="text-sm text-ink-500">{{ $item->quantity }} × <x-rupiah :value="$item->unit_price" /></p>
                     @if ($item->batch)
                         <p class="text-xs text-ink-500">Batch PO #{{ $item->batch->id }} · {{ $item->batch->status_label }} · tutup {{ $item->batch->closes_at?->translatedFormat('d M Y') }} · min {{ $item->batch->min_order }} pcs · estimasi {{ $item->batch->estimated_month?->translatedFormat('F Y') }}</p>

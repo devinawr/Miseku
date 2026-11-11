@@ -91,6 +91,10 @@ class Account extends Component
         if (Auth::user()->isAdmin() && in_array($this->tab, ['fandom', 'aktivitas', 'alamat', 'toko'], true)) {
             $this->tab = 'profil';
         }
+        // Mode Studio: tab belanja (fandom, minat, alamat pengiriman) tidak ditampilkan
+        if (\App\Support\StudioMode::active() && in_array($this->tab, ['fandom', 'aktivitas', 'alamat'], true)) {
+            $this->tab = 'toko';
+        }
 
         $user = Auth::user();
         $this->name = $user->name;

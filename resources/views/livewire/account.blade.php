@@ -5,9 +5,13 @@
     if (! $user->isAdmin()) { $tabs['toko'] = [$user->artistProfile ? 'Toko saya' : 'Buka toko', 'store']; }
     // admin hanya bekerja di panel: tidak perlu fandom favorit, minat, atau alamat pengiriman
     if ($user->isAdmin()) { unset($tabs['fandom'], $tabs['aktivitas'], $tabs['alamat']); }
+    // mode Studio (dibuka dari Studio): hanya tab akun & toko, tanpa tab belanja
+    $studio = \App\Support\StudioMode::active();
+    if ($studio) { unset($tabs['fandom'], $tabs['aktivitas'], $tabs['alamat']); }
 @endphp
 
-<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+<div @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-6xl' => ! $studio])>
+    @if ($studio)<x-studio-nav />@endif
     {{-- Kartu identitas --}}
     <div class="ms-card relative overflow-hidden">
         @if ($shopBanner)

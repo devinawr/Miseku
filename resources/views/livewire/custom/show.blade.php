@@ -8,7 +8,10 @@
     <div class="grid items-start gap-6 lg:grid-cols-12">
         <section class="ms-card space-y-3 p-5 lg:col-span-5">
             <h2 class="font-extrabold text-ink-900">Detail permintaan</h2>
-            <p class="text-sm text-ink-500">Pembeli: <b class="text-ink-800">{{ $r->buyer->name }}</b> · rating pembeli {{ number_format((float) $r->buyer->rating_as_buyer, 1) }}</p>
+            @unless ($isOwner)
+                {{-- Rating pembeli hanya untuk artis yang mau menawar; pembeli sendiri tidak perlu melihatnya --}}
+                <p class="text-sm text-ink-500">Pembeli: <b class="text-ink-800">{{ $r->buyer->name }}</b> · rating pembeli {{ number_format((float) $r->buyer->rating_as_buyer, 1) }}</p>
+            @endunless
             <p class="text-sm text-ink-500">Budget: <b class="text-ink-800"><x-rupiah :value="$r->budget_price" /></b></p>
             <p class="whitespace-pre-line text-sm text-ink-700">{{ $r->specification }}</p>
             @if ($images->isNotEmpty())

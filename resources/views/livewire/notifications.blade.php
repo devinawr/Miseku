@@ -1,9 +1,12 @@
-<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+@php $studio = \App\Support\StudioMode::active(); @endphp
+<div @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-6xl' => ! $studio])>
+    @if ($studio)<x-studio-nav />@endif
     <x-page-title title="Notifikasi" subtitle="Update pesanan, pembayaran, pelunasan, pick-up, pembatalan, custom, voting, dan penarikan dana. Salinan dikirim ke email.">
         <button type="button" wire:click="readAll" class="ms-btn-ghost"><x-icon name="check" class="h-4.5 w-4.5" /> Tandai semua dibaca</button>
     </x-page-title>
 
-    @if ($newProducts->isNotEmpty())
+    {{-- Rekomendasi belanja hanya di mode pembeli --}}
+    @if (! $studio && $newProducts->isNotEmpty())
         <section class="mb-8">
             <h2 class="ms-section-title mb-3 flex items-center gap-2"><x-icon name="sparkles" class="h-5 w-5 text-accent-500" /> Produk baru dari fandom favoritmu</h2>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

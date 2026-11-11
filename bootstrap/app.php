@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Admin hanya di panel admin (tidak ada beranda/belanja)
         $middleware->appendToGroup('web', \App\Http\Middleware\KeepAdminInPanel::class);
 
+        // Artis: catat mode Studio / mode belanja supaya chat, notifikasi & akun tidak campur
+        $middleware->appendToGroup('web', \App\Http\Middleware\TrackStudioMode::class);
+
         // Webhook Midtrans dipanggil server Midtrans (tanpa token CSRF)
         $middleware->validateCsrfTokens(except: ['midtrans/*']);
 
