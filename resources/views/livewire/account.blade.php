@@ -64,6 +64,7 @@
                         <button type="button" wire:click="removePhoto" wire:confirm="Hapus foto profil?" class="inline-flex items-center gap-1 text-xs font-bold text-ink-500 hover:text-red-600"><x-icon name="trash" class="h-3.5 w-3.5" /> Hapus foto</button>
                     @endif
                     <p class="text-center text-[11px] text-ink-400">JPG, PNG, atau WEBP · maks. 2 MB.<br>Langsung tersimpan setelah dipilih.</p>
+                    @if ($user->artistProfile)<p class="text-center text-[11px] font-semibold text-brand-700">Foto ini juga jadi foto tokomu.</p>@endif
                     @error('photo') <p class="ms-error text-center">{{ $message }}</p> @enderror
                 </div>
 
@@ -86,6 +87,36 @@
                     <button type="submit" class="ms-btn-primary" wire:loading.attr="disabled" wire:target="saveProfile">Simpan profil</button>
                 </div>
             </form>
+
+            {{-- Khusus artis: banner toko ikut diatur di sini (pembeli tidak punya banner, sama seperti Shopee) --}}
+            @if ($user->artistProfile)
+                {{-- Banner toko: tampil di halaman toko publik --}}
+                <div class="ms-card mt-5 space-y-3 p-5 sm:p-6">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-ink-900">Banner toko</h2>
+                        <p class="text-sm text-ink-500">Tampil di bagian atas halaman tokomu. Disarankan 1500×500 piksel (rasio 3:1), JPG/PNG/WEBP maks. 3 MB.</p>
+                    </div>
+                    <div class="relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-ink-100">
+                        @if ($shopBanner)
+                            <img src="{{ $shopBanner->url }}" alt="Banner {{ $user->artistProfile->shop_name }}" class="h-full w-full object-cover">
+                        @else
+                            <div class="ms-gradient flex h-full w-full items-center justify-center"><span class="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-ink-600">Belum ada banner — toko memakai banner bawaan</span></div>
+                        @endif
+                        <div wire:loading.flex wire:target="banner,removeBanner" class="absolute inset-0 items-center justify-center bg-white/70 text-sm font-bold text-brand-700">Memproses…</div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
+                            <x-icon name="photo" class="h-4 w-4" /> {{ $shopBanner ? 'Ganti banner' : 'Unggah banner' }}
+                            <input type="file" wire:model="banner" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                        </label>
+                        @if ($shopBanner)
+                            <button type="button" wire:click="removeBanner" wire:confirm="Hapus banner toko? Toko akan memakai banner bawaan." class="ms-btn-ghost !py-1.5 text-xs text-red-600"><x-icon name="trash" class="h-4 w-4" /> Hapus banner</button>
+                        @endif
+                        <a href="{{ route('artist.shop', $user->artistProfile) }}" wire:navigate class="ms-btn-ghost !py-1.5 text-xs">Lihat halaman toko</a>
+                    </div>
+                    @error('banner') <p class="ms-error">{{ $message }}</p> @enderror
+                </div>
+            @endif
         @endif
 
         {{-- ================= KEAMANAN ================= --}}
@@ -265,31 +296,11 @@
 
         @if ($tab === 'toko' && ! $user->isAdmin())
             @if ($user->artistProfile)
-                {{-- Banner toko: tampil di halaman toko publik --}}
-                <div class="ms-card mb-5 max-w-2xl space-y-3 p-5 sm:p-6">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-ink-900">Banner toko</h2>
-                        <p class="text-sm text-ink-500">Tampil di bagian atas halaman tokomu. Disarankan 1500×500 piksel (rasio 3:1), JPG/PNG/WEBP maks. 3 MB.</p>
-                    </div>
-                    <div class="relative aspect-[3/1] w-full overflow-hidden rounded-2xl bg-ink-100">
-                        @if ($shopBanner)
-                            <img src="{{ $shopBanner->url }}" alt="Banner {{ $user->artistProfile->shop_name }}" class="h-full w-full object-cover">
-                        @else
-                            <div class="ms-gradient flex h-full w-full items-center justify-center"><span class="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-ink-600">Belum ada banner — toko memakai banner bawaan</span></div>
-                        @endif
-                        <div wire:loading.flex wire:target="banner,removeBanner" class="absolute inset-0 items-center justify-center bg-white/70 text-sm font-bold text-brand-700">Memproses…</div>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
-                            <x-icon name="photo" class="h-4 w-4" /> {{ $shopBanner ? 'Ganti banner' : 'Unggah banner' }}
-                            <input type="file" wire:model="banner" accept="image/jpeg,image/png,image/webp" class="sr-only">
-                        </label>
-                        @if ($shopBanner)
-                            <button type="button" wire:click="removeBanner" wire:confirm="Hapus banner toko? Toko akan memakai banner bawaan." class="ms-btn-ghost !py-1.5 text-xs text-red-600"><x-icon name="trash" class="h-4 w-4" /> Hapus banner</button>
-                        @endif
-                        <a href="{{ route('artist.shop', $user->artistProfile) }}" wire:navigate class="ms-btn-ghost !py-1.5 text-xs">Lihat halaman toko</a>
-                    </div>
-                    @error('banner') <p class="ms-error">{{ $message }}</p> @enderror
+                {{-- Foto & banner toko diatur di tab Profil (seperti Shopee: foto akun = foto/logo toko) --}}
+                <div class="mb-5 flex max-w-2xl items-start gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-800 ring-1 ring-brand-100">
+                    <x-icon name="info" class="mt-0.5 h-5 w-5 shrink-0" />
+                    <p>Foto toko memakai <b>foto profil</b>-mu, dan <b>banner toko</b> juga diatur di tab
+                        <button type="button" wire:click="$set('tab', 'profil')" class="font-bold underline underline-offset-2">Profil</button>.</p>
                 </div>
             @endif
             <form wire:submit="saveShop" class="ms-card max-w-2xl space-y-4 p-5 sm:p-6">
