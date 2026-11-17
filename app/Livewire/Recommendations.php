@@ -11,8 +11,7 @@ use Livewire\Component;
 
 /**
  * Halaman "Lihat semua" dari bagian Rekomendasi untukmu di beranda.
- * Isinya HANYA produk hasil CBF (similarity > 0), diurutkan dari yang paling mirip
- * dengan profil minat user — bukan seluruh katalog.
+ * Produk paling sesuai CBF tampil lebih dulu, diikuti produk lain dari katalog.
  */
 #[Layout('components.layouts.app')]
 #[Title('Rekomendasi untukmu')]
@@ -34,7 +33,7 @@ class Recommendations extends Component
         }
 
         // ambil satu lebih banyak untuk tahu apakah masih ada sisa
-        return app(ContentBasedRecommender::class)->forUser(Auth::user(), $this->limit + 1);
+        return app(ContentBasedRecommender::class)->forUserWithFallback(Auth::user(), $this->limit + 1);
     }
 
     public function render()

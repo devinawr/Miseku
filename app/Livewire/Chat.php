@@ -87,7 +87,7 @@ class Chat extends Component
             'partner'       => $partner,
             'thread'        => $partner ? $service->thread($me, $partner->id) : collect(),
             'ctxProduct'    => $this->productId ? Product::find($this->productId) : null,
-            'ctxOrder'      => $this->orderId ? CustomerOrder::where(fn ($q) => $q->where('buyer_id', $me->id)->orWhereHas('artistProfile', fn ($a) => $a->where('user_id', $me->id)))->find($this->orderId) : null,
+            'ctxOrder'      => $this->orderId ? CustomerOrder::when(! $me->isAdmin(), fn ($q) => $q->where(fn ($q) => $q->where('buyer_id', $me->id)->orWhereHas('artistProfile', fn ($a) => $a->where('user_id', $me->id))))->find($this->orderId) : null,
             'ctxCustom'     => $this->customId ? CustomRequest::find($this->customId) : null,
         ]);
     }

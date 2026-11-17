@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ChatMessage;
+use App\Models\CustomerOrder;
 use App\Models\User;
 use App\Support\Fail;
 use Illuminate\Support\Collection;
@@ -15,7 +16,14 @@ class ChatService
     {
         Fail::unless(trim($body) !== '' || $hasPhotos, 'Tulis pesan atau lampirkan foto dulu.');
         Fail::unless($toId !== $from->id, 'Tidak bisa mengirim chat ke diri sendiri.');
-        Fail::unless(User::whereKey($toId)->where('is_active', true)->exists(), 'Penerima tidak ditemukan.');
+        $recipient = User::whereKey($toId)->where('is_active', true)->first();
+        Fail::unless((bool) $recipient, 'Penerima tidak ditemukan.');
+
+        if (! empty($context['order'])) {
+            $order = CustomerOrder::with('artistProfile')->find($context['order']);
+            $canAccess = fn (User $user) => $order && ($user->isAdmin() || $order->buyer_id === $user->id || $order->artistProfile?->user_id === $user->id);
+            Fail::unless($order && $canAccess($from) && $canAccess($recipient), 'Pesanan tidak tersedia untuk percakapan ini.');
+        }
 
         return ChatMessage::create([
             'sender_id'         => $from->id,

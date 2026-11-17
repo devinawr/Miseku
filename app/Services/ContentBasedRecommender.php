@@ -179,6 +179,27 @@ class ContentBasedRecommender
         return $this->rank($profile, $candidates, $limit);
     }
 
+    /** Halaman rekomendasi: seluruh produk terlihat, skor CBF positif lebih dulu. */
+    public function forUserWithFallback(User $user, int $limit = 20): Collection
+    {
+        $profile = $this->profile($user);
+        $candidates = $this->candidates()
+            ->when($user->artistProfile, fn ($q) => $q->where('artist_profile_id', '!=', $user->artistProfile->id))
+            ->get();
+
+        return $candidates->map(function (Product $p) use ($profile) {
+            // Jangan membulatkan sebelum mengurutkan: skor kecil tetap di atas nol.
+            $p->similarity = $this->similarity($profile, $p);
+            $p->reason = $p->similarity > 0 ? $this->reason($profile, $p) : null;
+            return $p;
+        })->sortBy([
+            ['similarity', 'desc'],
+            fn ($a, $b) => (float) $b->rating <=> (float) $a->rating,
+            fn ($a, $b) => $b->created_at <=> $a->created_at,
+            fn ($a, $b) => $b->id <=> $a->id,
+        ])->values()->take($limit);
+    }
+
     /** Produk serupa (item-to-item): profil = vektor produk itu sendiri. */
     public function similarTo(Product $product, int $limit = 4): Collection
     {

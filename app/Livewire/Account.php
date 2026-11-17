@@ -299,6 +299,7 @@ class Account extends Component
     {
         $this->cityPlaceId = $this->city_id = $this->city_label = $this->citySearch = $this->cityProvinceName = '';
         $this->cityPage = 0;
+        $this->postal_code = '';
         foreach ($this->provinceOptions['items'] as $row) if ($row['id'] === $this->cityProvinceId) $this->cityProvinceName = $row['name'];
     }
 
@@ -306,6 +307,7 @@ class Account extends Component
     {
         $this->shopPlaceId = $this->shop_city_id = $this->shop_city_label = $this->shopCitySearch = $this->shopProvinceName = '';
         $this->shopCityPage = 0;
+        $this->shop_postal_code = '';
         foreach ($this->provinceOptions['items'] as $row) if ($row['id'] === $this->shopProvinceId) $this->shopProvinceName = $row['name'];
     }
 
@@ -313,6 +315,7 @@ class Account extends Component
     {
         $this->city_id = $this->city_label = $this->citySearch = '';
         $this->cityPage = 0;
+        $this->postal_code = '';
         foreach ($this->cityPlaceOptions['items'] as $row) {
             if ($row['id'] !== $this->cityPlaceId) continue;
             if (app(ShippingService::class)->isLive()) $this->citySearch = $row['name'];
@@ -325,6 +328,7 @@ class Account extends Component
     {
         $this->shop_city_id = $this->shop_city_label = $this->shopCitySearch = '';
         $this->shopCityPage = 0;
+        $this->shop_postal_code = '';
         foreach ($this->shopPlaceOptions['items'] as $row) {
             if ($row['id'] !== $this->shopPlaceId) continue;
             if (app(ShippingService::class)->isLive()) $this->shopCitySearch = $row['name'];
@@ -345,17 +349,31 @@ class Account extends Component
         $this->shopCityPage = 0;
     }
 
+    /** Ganti tujuan: jangan biarkan ID atau kode pos pilihan lama tersimpan. */
+    public function changeSelectedLocation(bool $shop = false): void
+    {
+        if ($shop) {
+            $this->shop_city_id = $this->shop_city_label = $this->shopCitySearch = $this->shop_postal_code = '';
+            $this->shopCityPage = 0;
+        } else {
+            $this->city_id = $this->city_label = $this->citySearch = $this->postal_code = '';
+            $this->cityPage = 0;
+        }
+    }
+
     public function changeCityPage(int $delta, bool $shop = false): void
     {
         if ($shop) $this->shopCityPage = max(0, $this->shopCityPage + $delta);
         else $this->cityPage = max(0, $this->cityPage + $delta);
     }
 
-    public function pickShopCity(string $id, string $label, string $province): void
+    public function pickShopCity(string $id, string $label, string $province, string $zip = '', string $city = ''): void
     {
         $this->shop_city_id = $id;
         $this->shop_city_label = $label . ($province && ! str_contains(mb_strtolower($label), mb_strtolower($province)) ? ', ' . $province : '');
         $this->shopProvinceName = $province;
+        $this->shop_postal_code = $this->postalFromLocation($zip, $label);
+        $this->syncLocationSelectors($province, $city, true);
         $this->shopCitySearch = '';
     }
 
@@ -391,12 +409,50 @@ class Account extends Component
         $this->addressForm = true;
     }
 
-    public function pickCity(string $id, string $label, string $province): void
+    public function pickCity(string $id, string $label, string $province, string $zip = '', string $city = ''): void
     {
         $this->city_id = $id;
         $this->city_label = $label . ($province && ! str_contains(mb_strtolower($label), mb_strtolower($province)) ? ', ' . $province : '');
         $this->cityProvinceName = $province;
+        $this->postal_code = $this->postalFromLocation($zip, $label);
+        $this->syncLocationSelectors($province, $city, false);
         $this->citySearch = '';
+    }
+
+    /** Only fill a postal code supplied by the chosen destination, never guess one. */
+    private function postalFromLocation(string $zip, string $label): string
+    {
+        $zip = trim($zip);
+        if (preg_match('/^\d{5}$/', $zip)) return $zip;
+        return preg_match('/(?<!\d)(\d{5})\s*$/u', $label, $match) ? $match[1] : '';
+    }
+
+    /** Synchronise dropdowns only when the API's names can be matched unambiguously. */
+    private function syncLocationSelectors(string $province, string $city, bool $shop): void
+    {
+        if (! app(ShippingService::class)->isLive() || trim($province) === '') return;
+        $norm = fn (string $s) => mb_strtoupper(trim(preg_replace('/\s+/u', ' ', $s)));
+        $provinces = collect($this->provinceOptions['items'])->filter(fn ($p) => $norm($p['name']) === $norm($province))->values();
+        $provinceId = $provinces->count() === 1 ? (string) $provinces[0]['id'] : '';
+        $placeId = '';
+        if ($provinceId !== '' && trim($city) !== '') {
+            $places = collect(app(ShippingService::class)->regionOptions('city', $provinceId)['items']);
+            $matches = $places->filter(fn ($p) => $norm($p['name']) === $norm($city))->values();
+            if ($matches->isEmpty()) {
+                $short = fn (string $s) => preg_replace('/^(KOTA|KABUPATEN|KAB\.)\s+/u', '', $norm($s));
+                $matches = $places->filter(fn ($p) => $short($p['name']) === $short($city))->values();
+            }
+            if ($matches->count() === 1) $placeId = (string) $matches[0]['id'];
+        }
+        if ($shop) {
+            $this->shopProvinceId = $provinceId;
+            $this->shopPlaceId = $placeId;
+            unset($this->shopPlaceOptions);
+        } else {
+            $this->cityProvinceId = $provinceId;
+            $this->cityPlaceId = $placeId;
+            unset($this->cityPlaceOptions);
+        }
     }
 
     public function saveAddress(): void

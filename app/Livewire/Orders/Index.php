@@ -3,6 +3,7 @@
 namespace App\Livewire\Orders;
 
 use App\Models\CustomerOrder;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -48,6 +49,8 @@ class Index extends Component
         $counts = CustomerOrder::where('buyer_id', Auth::id())
             ->selectRaw('order_status, COUNT(*) AS n')->groupBy('order_status')->pluck('n', 'order_status');
 
-        return view('livewire.orders.index', compact('orders', 'counts'));
+        $csAdmin = User::where('role', 'admin')->where('is_active', true)->orderBy('id')->first();
+
+        return view('livewire.orders.index', compact('orders', 'counts', 'csAdmin'));
     }
 }

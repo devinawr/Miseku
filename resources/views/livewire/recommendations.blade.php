@@ -2,7 +2,7 @@
     <a href="{{ route('home') }}" wire:navigate class="ms-link text-sm"><x-icon name="chevron-left" class="h-4 w-4" /> Beranda</a>
 
     <x-section-heading class="mt-3" title="Rekomendasi untukmu" icon="sparkles"
-        subtitle="Diurutkan dari yang paling cocok dengan fandom favorit, pencarian, produk yang kamu lihat, keranjang, dan pembelianmu." />
+        subtitle="Produk yang sesuai minatmu tampil lebih dulu, lalu produk lainnya untuk kamu jelajahi." />
 
     @php $items = $this->items; @endphp
 
@@ -17,8 +17,8 @@
         @if ($items->isEmpty())
             <div class="ms-card flex flex-col items-center p-10 text-center">
                 <x-icon name="sparkles" class="h-10 w-10 text-brand-500" />
-                <p class="mt-3 font-extrabold text-ink-900">Rekomendasimu belum terbentuk</p>
-                <p class="mt-1 text-sm text-ink-500">Pilih fandom favorit atau lihat-lihat beberapa produk dulu, ya.</p>
+                <p class="mt-3 font-extrabold text-ink-900">Belum ada produk untuk ditampilkan</p>
+                <p class="mt-1 text-sm text-ink-500">Coba kembali lagi nanti atau jelajahi katalog, ya.</p>
                 <div class="mt-5 flex gap-2">
                     <a href="{{ route('account', ['tab' => 'fandom']) }}" wire:navigate class="ms-btn-ghost">Pilih fandom favorit</a>
                     <a href="{{ route('catalog') }}" wire:navigate class="ms-btn-primary">Jelajahi katalog</a>

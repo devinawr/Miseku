@@ -16,7 +16,7 @@
         this.url = url; this.image = img; this.zoom = 1; this.dx = 0; this.dy = 0; this.open = true;
         this.$nextTick(() => setTimeout(() => this.measure(), 50));
     },
-    measure() { if (!this.open) return; this.width = this.$refs.viewport.clientWidth; this.height = this.$refs.viewport.clientHeight; this.clamp(); },
+    measure() { if (!this.open) return; const rect = this.$refs.viewport.getBoundingClientRect(); this.width = rect.width; this.height = rect.height; this.clamp(); },
     get scale() { return this.image && this.width && this.height ? Math.max(this.width / this.image.naturalWidth, this.height / this.image.naturalHeight) * Number(this.zoom) : 1; },
     clamp() {
         if (!this.image) return;
@@ -54,8 +54,8 @@
         <div class="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl sm:p-6">
             <h2 class="text-lg font-extrabold text-ink-900" x-text="kind === 'photo' ? 'Atur foto profil' : 'Atur banner toko'"></h2>
             <p class="mt-1 text-sm text-ink-600">Seret gambar untuk mengatur posisi. Gunakan penggeser untuk memperbesar.</p>
-            <div x-ref="viewport" tabindex="0" aria-label="Pratinjau gambar, seret atau gunakan tombol panah untuk menggeser" @keydown="nudge($event)" @pointerdown.prevent="start($event)" @pointermove.prevent="move($event)" @pointerup="stop($event)" @pointercancel="stop($event)" class="relative mx-auto mt-4 overflow-hidden bg-ink-100" :class="kind === 'photo' ? 'w-64 max-w-full aspect-square rounded-full' : 'w-full aspect-[3/1] rounded-xl'" style="touch-action: none; cursor: grab;">
-                <img :src="url" alt="Pratinjau gambar" draggable="false" class="pointer-events-none absolute max-w-none select-none" :style="image ? {width: (image.naturalWidth * scale) + 'px', height: (image.naturalHeight * scale) + 'px', left: ((width - image.naturalWidth * scale) / 2 + dx) + 'px', top: ((height - image.naturalHeight * scale) / 2 + dy) + 'px'} : {}">
+            <div x-ref="viewport" tabindex="0" aria-label="Pratinjau gambar, seret atau gunakan tombol panah untuk menggeser" @keydown="nudge($event)" @pointerdown.prevent="start($event)" @pointermove.prevent="move($event)" @pointerup="stop($event)" @pointercancel="stop($event)" class="relative mx-auto mt-4 overflow-hidden bg-ink-100" :class="kind === 'photo' ? 'rounded-full' : 'rounded-xl'" :style="{ width: kind === 'photo' ? 'min(100%, 256px)' : '100%', aspectRatio: kind === 'photo' ? '1 / 1' : '3 / 1', touchAction: 'none', cursor: 'grab' }">
+                <img :src="url" alt="Pratinjau gambar" draggable="false" class="pointer-events-none absolute select-none" :style="image ? {width: (image.naturalWidth * scale) + 'px', height: 'auto', maxWidth: 'none', maxHeight: 'none', left: ((width - image.naturalWidth * scale) / 2 + dx) + 'px', top: ((height - image.naturalHeight * scale) / 2 + dy) + 'px'} : {}">
             </div>
             <label class="mt-4 flex items-center gap-3 text-sm font-semibold text-ink-700">Perbesar <input type="range" min="1" max="3" step="0.01" x-model.number="zoom" @input="clamp()" class="w-full" :disabled="busy"></label>
             <p x-show="error" x-text="error" class="ms-error mt-2" role="alert" x-cloak></p>

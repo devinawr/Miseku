@@ -1,5 +1,5 @@
 @php $studio = \App\Support\StudioMode::active(); $myShopId = $me->artistProfile?->id; @endphp
-<div @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-6xl' => ! $studio])>
+<div wire:poll.5s @class(['mx-auto px-4 py-8 sm:px-6 lg:px-8', 'max-w-7xl' => $studio, 'max-w-6xl' => ! $studio])>
     @if ($studio)<x-studio-nav />@endif
     <x-page-title title="Chat" subtitle="Tanya stok, diskusi custom, atau koordinasi pesanan langsung dengan artis/pembeli." />
 
@@ -40,8 +40,23 @@
                         <p class="text-xs text-ink-500">{{ ['admin' => 'Admin', 'artist' => 'Artis', 'buyer' => 'Pembeli'][$partner->role] }}</p>
                     </div>
                 </header>
-                <div class="flex-1 space-y-2 overflow-y-auto bg-ink-50/50 px-5 py-4" style="max-height: 28rem" wire:poll.8s
-                     x-data x-init="$el.scrollTop = $el.scrollHeight" x-effect="$el.scrollTop = $el.scrollHeight">
+                <div class="flex-1 space-y-2 overflow-y-auto bg-ink-50/50 px-5 py-4" style="max-height: 28rem"
+                     wire:key="thread-{{ $partner->id }}"
+                     x-data="{
+                         atBottom: true,
+                         cleanup: null,
+                         init() {
+                             const area = this.$el;
+                             area.scrollTop = area.scrollHeight;
+                             const observer = new MutationObserver(() => {
+                                 if (this.atBottom) this.$nextTick(() => { area.scrollTop = area.scrollHeight });
+                             });
+                             observer.observe(area, { childList: true });
+                             this.cleanup = () => observer.disconnect();
+                         },
+                         destroy() { if (this.cleanup) this.cleanup() }
+                     }"
+                     @scroll.passive="atBottom = $el.scrollHeight - $el.scrollTop - $el.clientHeight < 80">
                     @forelse ($thread as $m)
                         @php $own = $m->sender_id === $me->id; @endphp
                         <div class="flex {{ $own ? 'justify-end' : 'justify-start' }}" wire:key="m-{{ $m->id }}">
@@ -56,7 +71,7 @@
                                             $tags[] = ['🛍 ' . $m->product->product_name, $mine && $studio ? route('studio.product.edit', $m->product_id) : route('product.detail', $m->product_id)];
                                         }
                                         if ($m->order) {
-                                            $tags[] = ['📦 ' . $m->order->order_code, $m->order->buyer_id === $me->id ? route('orders.show', $m->order) : route('studio.orders.show', $m->order)];
+                                            $tags[] = ['📦 ' . $m->order->order_code, ($m->order->buyer_id === $me->id || $me->isAdmin()) ? route('orders.show', $m->order) : route('studio.orders.show', $m->order)];
                                         }
                                         if ($m->customRequest) {
                                             $tags[] = ['✏️ Custom: ' . $m->customRequest->design_character, $m->customRequest->buyer_id === $me->id ? route('custom.show', $m->customRequest) : route('studio.custom.show', $m->customRequest)];

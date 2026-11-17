@@ -48,7 +48,7 @@
             @if ($isAdmin)
                 <span class="ms-chip bg-ink-900 text-white">Panel admin</span>
             @elseif ($isStudio)
-                <span class="ms-chip bg-brand-50 text-brand-700 ring-1 ring-brand-200">Studio artis</span>
+                <span class="ms-chip bg-brand-50 text-brand-700 ring-1 ring-brand-200 max-[359px]:hidden">Studio artis</span>
                 <a href="{{ route('home') }}" wire:navigate class="ms-btn-ghost hidden !py-2 text-sm md:inline-flex" title="Kembali belanja sebagai pembeli">
                     <x-icon name="home" class="h-4.5 w-4.5" /> Beranda
                 </a>
@@ -68,15 +68,15 @@
             </form>
             @endif
 
-            <div class="ml-auto flex items-center gap-1 sm:gap-2">
+            <div class="ml-auto flex items-center gap-0 sm:gap-2">
                 {{-- HP: ikon cari tetap tampil di semua halaman --}}
                 @unless ($isAdmin || $isStudio)
-                <a href="{{ route('catalog') }}" wire:navigate class="ms-icon-btn md:hidden" title="Cari">
+                <a href="{{ route('catalog') }}" wire:navigate class="ms-icon-btn hidden sm:inline-flex md:hidden" title="Cari">
                     <x-icon name="search" class="h-6 w-6" />
                 </a>
                 @endunless
 
-                <livewire:theme-picker />
+                <div class="hidden min-[400px]:block"><livewire:theme-picker /></div>
 
                 @auth
                     <a href="{{ route('chat') }}" wire:navigate class="ms-icon-btn hidden sm:inline-flex" title="Chat">
@@ -87,6 +87,13 @@
 
                 @unless ($isAdmin)
                     <livewire:cart-badge />
+                    @auth
+                        <a href="{{ $isStudio ? route('studio.orders') : route('orders.index') }}" wire:navigate
+                           class="ms-icon-btn" title="{{ $isStudio ? 'Pesanan toko' : 'Pesanan saya' }}"
+                           aria-label="{{ $isStudio ? 'Pesanan toko' : 'Pesanan saya' }}">
+                            <x-icon name="receipt" class="h-6 w-6" />
+                        </a>
+                    @endauth
                 @endunless
 
                 @guest

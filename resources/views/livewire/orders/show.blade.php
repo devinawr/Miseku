@@ -16,7 +16,7 @@
                     <h3 class="font-extrabold text-ink-900">Tindakan</h3>
 
                     @if ($pending)
-                        <a href="{{ route('payments.show', $pending) }}" class="ms-btn-primary w-full">Bayar {{ $pending->type_label }} <x-rupiah :value="$pending->amount" /></a>
+                        <a href="{{ route('payments.show', $pending) }}" class="ms-btn-primary w-full"> {{ $pending->payment_type === 'full' ? $pending->type_label : 'Bayar ' . $pending->type_label }}<x-rupiah :value="$pending->amount" /></a>
                     @elseif ($o->order_status === 'awaiting_settlement')
                         <button type="button" wire:click="reissueSettlement" class="ms-btn-primary w-full">Terbitkan ulang tagihan pelunasan</button>
                     @endif

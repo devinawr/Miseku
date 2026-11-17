@@ -68,7 +68,13 @@ class ShippingService
             if ($res->status() === 404) return ['items' => [], 'error' => false];
             if ($res->successful() && is_array($res->json('data'))) {
                 $items = collect($res->json('data'))->filter(fn ($row) => isset($row['id']))->map(function ($row) {
-                    $item = ['id' => (string) $row['id'], 'label' => (string) ($row['label'] ?? $row['city_name'] ?? ''), 'province' => (string) ($row['province_name'] ?? '')];
+                    $label = (string) ($row['label'] ?? $row['city_name'] ?? '');
+                    $zip = trim((string) ($row['zip_code'] ?? ''));
+                    if (! preg_match('/^\d{5}$/', $zip)) {
+                        $zip = preg_match('/(?<!\d)(\d{5})\s*$/u', $label, $match) ? $match[1] : '';
+                    }
+                    $item = ['id' => (string) $row['id'], 'label' => $label,
+                        'province' => (string) ($row['province_name'] ?? ''), 'city' => (string) ($row['city_name'] ?? ''), 'zip' => $zip];
                     Cache::put('ro_city_' . $item['id'], $item['label'], now()->addDays(30));
                     return $item;
                 })->values()->all();

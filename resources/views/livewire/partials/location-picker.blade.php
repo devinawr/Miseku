@@ -14,7 +14,7 @@
     $errorField = $shop ? 'shop_city_id' : 'city_id';
 @endphp
 <div class="space-y-3">
-    @if ($selectedLabel)
+    @if ($selectedLabel && ! $shippingLive)
         <p class="rounded-lg bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">Wilayah terpilih: {{ $selectedLabel }}</p>
     @endif
     <label class="block">
@@ -44,18 +44,27 @@
     @if ($shippingLive)
         <div>
             <label class="block"><span class="ms-label">Kecamatan / kelurahan untuk ongkir</span>
-                <input type="search" wire:model.live.debounce.500ms="{{ $searchProperty }}" class="ms-input" placeholder="Cari minimal 3 huruf, mis. nama kecamatan">
+                @if ($selectedLabel)
+                    <input wire:key="{{ $searchProperty }}-selected" type="text" value="{{ $selectedLabel }}" class="ms-input" readonly aria-label="Wilayah terpilih">
+                @else
+                    <input wire:key="{{ $searchProperty }}-search" type="search" wire:model.live.debounce.500ms="{{ $searchProperty }}" class="ms-input" placeholder="Cari minimal 3 huruf, mis. nama kecamatan">
+                @endif
             </label>
-            <p class="mt-1 text-xs text-ink-500">Pilih hasil yang sesuai alamat. Bisa mencari langsung jika daftar provinsi atau kota tidak tersedia.</p>
+            @if ($selectedLabel)
+                <button type="button" wire:click="changeSelectedLocation({{ $shop ? 'true' : 'false' }})" class="mt-2 text-sm font-bold text-brand-700 hover:underline">Ganti wilayah</button>
+                <p class="mt-1 text-xs text-ink-500">Wilayah dipilih. Kode pos terisi bila tersedia; periksa kembali.</p>
+            @else
+                <p class="mt-1 text-xs text-ink-500">Pilih hasil yang sesuai alamat. Kode pos terisi bila tersedia; periksa kembali. Bisa mencari langsung jika daftar provinsi atau kota tidak tersedia.</p>
+            @endif
             <p class="mt-1 text-xs text-ink-500" wire:loading wire:target="{{ $searchProperty }},{{ $placeProperty }},changeCityPage">Mencari wilayah…</p>
-            @if (mb_strlen(trim($searchText)) >= 3)
+            @if (! $selectedLabel && mb_strlen(trim($searchText)) >= 3)
                 @if ($results['error'])
                     <p class="mt-2 text-sm text-red-600">Pencarian RajaOngkir gagal. Periksa API key dan koneksi, lalu coba lagi.</p>
                 @elseif (count($results['items']))
                     <div class="mt-2 overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm">
                         <ul class="max-h-56 overflow-y-auto divide-y divide-ink-100">
                             @foreach ($results['items'] as $c)
-                                <li><button type="button" wire:click="{{ $pickMethod }}(@js($c['id']), @js($c['label']), @js($c['province']))" class="block w-full px-3 py-2 text-left text-sm hover:bg-brand-50">{{ $c['label'] }}</button></li>
+                                <li><button type="button" wire:click="{{ $pickMethod }}(@js($c['id']), @js($c['label']), @js($c['province']), @js($c['zip'] ?? ''), @js($c['city'] ?? ''))" class="block w-full px-3 py-2 text-left text-sm hover:bg-brand-50">{{ $c['label'] }}</button></li>
                             @endforeach
                         </ul>
                         @if ($page > 0 || count($results['items']) === 25)

@@ -12,8 +12,26 @@
 
     <div class="space-y-3">
         @forelse ($orders as $order)
-            @php $first = $order->items->first(); $pending = $order->payments->firstWhere('payment_status', 'pending'); @endphp
-            <a href="{{ route('orders.show', $order) }}" wire:navigate wire:key="o-{{ $order->id }}" class="ms-card flex gap-4 p-4 transition hover:border-brand-300">
+            @php
+                $first = $order->items->first();
+                $pending = $order->pendingPayment();
+                $statusMessage = match ($order->order_status) {
+                    'awaiting_payment' => 'Menunggu pembayaran. Selesaikan pembayaran agar pesanan dapat diproses.',
+                    'awaiting_settlement' => 'Menunggu pelunasan. Buka detail pesanan untuk melihat tagihan.',
+                    'paid' => $order->order_type === 'pre_order' ? 'Pembayaran diterima. Menunggu pre-order ditutup.' : 'Pembayaran diterima. Pesanan menunggu diproses.',
+                    'awaiting_production' => 'Pesanan menunggu proses produksi.',
+                    'in_production' => 'Pesanan sedang diproduksi oleh artis.',
+                    'production_completed' => $order->isDp() && ! $order->isFullyPaid() ? 'Produksi selesai. Lihat detail untuk informasi pelunasan.' : ($order->isPickup() ? 'Produksi selesai. Pesanan menunggu disiapkan untuk pengambilan.' : 'Produksi selesai. Pesanan menunggu pengiriman.'),
+                    'shipped' => 'Paket sudah dikirim' . ($order->courier ? ' (' . $order->courier . ')' : '') . '. Lihat detail pesanan untuk informasi pengiriman.',
+                    'ready_for_pickup' => 'Pesanan siap diambil di booth. Lihat detail pesanan untuk informasi pengambilan.',
+                    'completed' => 'Pesanan selesai. Terima kasih sudah berbelanja!',
+                    'cancelled' => 'Pesanan dibatalkan. Lihat detail pesanan untuk informasi selengkapnya.',
+                    'failed' => 'Pesanan gagal. Lihat detail pesanan untuk informasi selengkapnya.',
+                    default => 'Lihat detail pesanan untuk informasi terbaru.',
+                };
+            @endphp
+            <article wire:key="o-{{ $order->id }}" class="ms-card overflow-hidden">
+            <a href="{{ route('orders.show', $order) }}" wire:navigate class="flex gap-4 p-4 transition hover:bg-brand-50/40">
                 <img src="{{ $first?->product?->cover_url ?? '/img/logo-mark.png' }}" class="h-20 w-20 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
@@ -34,6 +52,16 @@
                     </div>
                 </div>
             </a>
+            <div class="border-t border-ink-100 bg-brand-50/40 px-4 py-3 text-sm text-ink-700">{{ $statusMessage }}</div>
+            <div class="flex flex-wrap items-center justify-end gap-2 border-t border-ink-100 px-4 py-3">
+                @if ($csAdmin)
+                    <a href="{{ route('chat', ['with' => $csAdmin->id, 'pesanan' => $order->id]) }}" wire:navigate class="ms-btn-ghost !py-2 text-sm"><x-icon name="chat" class="h-4 w-4" /> Hubungi CS</a>
+                @else
+                    <span class="text-xs text-ink-500">CS belum tersedia</span>
+                @endif
+                <a href="{{ route('orders.show', $order) }}" wire:navigate class="ms-btn-primary !py-2 text-sm">Lihat detail pesanan</a>
+            </div>
+            </article>
         @empty
             <x-empty-state icon="receipt" title="Belum ada pesanan di sini" description="Pesanan yang kamu buat akan tampil di halaman ini.">
                 <a href="{{ route('catalog') }}" wire:navigate class="ms-btn-primary">Belanja sekarang</a>
