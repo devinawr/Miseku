@@ -68,6 +68,10 @@ class Account extends Component
     public string $city_id = '';
     public string $city_label = '';
     public string $citySearch = '';
+    public string $cityProvinceId = '';
+    public string $cityPlaceId = '';
+    public string $cityProvinceName = '';
+    public int $cityPage = 0;
     public string $postal_code = '';
     public bool $is_primary = false;
 
@@ -81,6 +85,10 @@ class Account extends Component
     public string $shop_city_id = '';
     public string $shop_city_label = '';
     public string $shopCitySearch = '';
+    public string $shopProvinceId = '';
+    public string $shopPlaceId = '';
+    public string $shopProvinceName = '';
+    public int $shopCityPage = 0;
     public string $shop_postal_code = '';
 
     public function mount(): void
@@ -110,6 +118,7 @@ class Account extends Component
         if ($sa = $user->shopAddress) {
             $this->shop_address = $sa->full_address;
             $this->shop_city_id = (string) $sa->rajaongkir_city_id;
+            $this->shopProvinceName = (string) $sa->province;
             $this->shop_city_label = $sa->city_name . ', ' . $sa->province;
             $this->shop_postal_code = (string) $sa->postal_code;
         }
@@ -257,21 +266,96 @@ class Account extends Component
     }
 
     #[Computed]
+    public function provinceOptions(): array
+    {
+        return app(ShippingService::class)->regionOptions('province');
+    }
+
+    #[Computed]
+    public function cityPlaceOptions(): array
+    {
+        return $this->cityProvinceId !== '' ? app(ShippingService::class)->regionOptions('city', $this->cityProvinceId) : ['items' => [], 'error' => false];
+    }
+
+    #[Computed]
+    public function shopPlaceOptions(): array
+    {
+        return $this->shopProvinceId !== '' ? app(ShippingService::class)->regionOptions('city', $this->shopProvinceId) : ['items' => [], 'error' => false];
+    }
+
+    #[Computed]
     public function cityResults(): array
     {
-        return mb_strlen(trim($this->citySearch)) >= 2 ? app(ShippingService::class)->searchCities($this->citySearch, 8) : [];
+        return app(ShippingService::class)->lookupCities($this->citySearch, 25, $this->cityPage * 25);
     }
 
     #[Computed]
     public function shopCityResults(): array
     {
-        return mb_strlen(trim($this->shopCitySearch)) >= 2 ? app(ShippingService::class)->searchCities($this->shopCitySearch, 8) : [];
+        return app(ShippingService::class)->lookupCities($this->shopCitySearch, 25, $this->shopCityPage * 25);
+    }
+
+    public function updatedCityProvinceId(): void
+    {
+        $this->cityPlaceId = $this->city_id = $this->city_label = $this->citySearch = $this->cityProvinceName = '';
+        $this->cityPage = 0;
+        foreach ($this->provinceOptions['items'] as $row) if ($row['id'] === $this->cityProvinceId) $this->cityProvinceName = $row['name'];
+    }
+
+    public function updatedShopProvinceId(): void
+    {
+        $this->shopPlaceId = $this->shop_city_id = $this->shop_city_label = $this->shopCitySearch = $this->shopProvinceName = '';
+        $this->shopCityPage = 0;
+        foreach ($this->provinceOptions['items'] as $row) if ($row['id'] === $this->shopProvinceId) $this->shopProvinceName = $row['name'];
+    }
+
+    public function updatedCityPlaceId(): void
+    {
+        $this->city_id = $this->city_label = $this->citySearch = '';
+        $this->cityPage = 0;
+        foreach ($this->cityPlaceOptions['items'] as $row) {
+            if ($row['id'] !== $this->cityPlaceId) continue;
+            if (app(ShippingService::class)->isLive()) $this->citySearch = $row['name'];
+            else $this->pickCity($row['id'], $row['name'], $this->cityProvinceName);
+            break;
+        }
+    }
+
+    public function updatedShopPlaceId(): void
+    {
+        $this->shop_city_id = $this->shop_city_label = $this->shopCitySearch = '';
+        $this->shopCityPage = 0;
+        foreach ($this->shopPlaceOptions['items'] as $row) {
+            if ($row['id'] !== $this->shopPlaceId) continue;
+            if (app(ShippingService::class)->isLive()) $this->shopCitySearch = $row['name'];
+            else $this->pickShopCity($row['id'], $row['name'], $this->shopProvinceName);
+            break;
+        }
+    }
+
+    public function updatedCitySearch(): void
+    {
+        $this->city_id = $this->city_label = '';
+        $this->cityPage = 0;
+    }
+
+    public function updatedShopCitySearch(): void
+    {
+        $this->shop_city_id = $this->shop_city_label = '';
+        $this->shopCityPage = 0;
+    }
+
+    public function changeCityPage(int $delta, bool $shop = false): void
+    {
+        if ($shop) $this->shopCityPage = max(0, $this->shopCityPage + $delta);
+        else $this->cityPage = max(0, $this->cityPage + $delta);
     }
 
     public function pickShopCity(string $id, string $label, string $province): void
     {
         $this->shop_city_id = $id;
-        $this->shop_city_label = $label . ($province ? ', ' . $province : '');
+        $this->shop_city_label = $label . ($province && ! str_contains(mb_strtolower($label), mb_strtolower($province)) ? ', ' . $province : '');
+        $this->shopProvinceName = $province;
         $this->shopCitySearch = '';
     }
 
@@ -283,6 +367,8 @@ class Account extends Component
         $this->recipient_name = Auth::user()->name;
         $this->full_address = $this->postal_code = $this->city_id = $this->city_label = $this->citySearch = '';
         $this->is_primary = $this->addresses->isEmpty();
+        $this->cityProvinceId = $this->cityPlaceId = $this->cityProvinceName = '';
+        $this->cityPage = 0;
         $this->addressForm = true;
     }
 
@@ -295,6 +381,9 @@ class Account extends Component
         $this->recipient_name = $a->recipient_name;
         $this->full_address = $a->full_address;
         $this->city_id = (string) $a->rajaongkir_city_id;
+        $this->cityProvinceName = (string) $a->province;
+        $this->cityProvinceId = $this->cityPlaceId = '';
+        $this->cityPage = 0;
         $this->city_label = $a->city_name . ', ' . $a->province;
         $this->citySearch = '';
         $this->postal_code = (string) $a->postal_code;
@@ -305,7 +394,8 @@ class Account extends Component
     public function pickCity(string $id, string $label, string $province): void
     {
         $this->city_id = $id;
-        $this->city_label = $label . ($province ? ', ' . $province : '');
+        $this->city_label = $label . ($province && ! str_contains(mb_strtolower($label), mb_strtolower($province)) ? ', ' . $province : '');
+        $this->cityProvinceName = $province;
         $this->citySearch = '';
     }
 
@@ -321,7 +411,7 @@ class Account extends Component
 
         $user = Auth::user();
         $shipping = app(ShippingService::class);
-        $province = $shipping->provinceOf($data['city_id']) ?? trim((string) strrchr($this->city_label, ','), ', ');
+        $province = $this->cityProvinceName ?: ($shipping->provinceOf($data['city_id']) ?? trim((string) strrchr($this->city_label, ','), ', '));
 
         DB::transaction(function () use ($user, $data, $province) {
             $primary = $this->is_primary || ! $user->addresses()->whereKeyNot($this->addressId ?? 0)->exists();
@@ -445,7 +535,7 @@ class Account extends Component
             'shop_city_id.required'     => 'Pilih kota/kecamatan toko dari hasil pencarian.',
         ], ['shop_name' => 'nama toko', 'bank_name' => 'nama bank', 'bank_account_number' => 'nomor rekening', 'shop_address' => 'alamat toko', 'shop_postal_code' => 'kode pos']);
 
-        $province = app(ShippingService::class)->provinceOf($data['shop_city_id']) ?? trim((string) strrchr($this->shop_city_label, ','), ', ');
+        $province = $this->shopProvinceName ?: (app(ShippingService::class)->provinceOf($data['shop_city_id']) ?? trim((string) strrchr($this->shop_city_label, ','), ', '));
         $addressValues = [
             'recipient_name' => trim($data['shop_name']), 'full_address' => $data['shop_address'],
             'rajaongkir_city_id' => $data['shop_city_id'], 'province' => mb_substr($province ?: '-', 0, 80),

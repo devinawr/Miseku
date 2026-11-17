@@ -1,7 +1,7 @@
 @php
     $user  = $this->user;
     $roles = ['buyer' => 'Pembeli', 'artist' => 'Artis', 'admin' => 'Admin'];
-    $tabs  = ['profil' => ['Profil', 'user'], 'keamanan' => ['Keamanan', 'lock'], 'fandom' => ['Fandom favorit', 'heart'], 'aktivitas' => ['Aktivitas & minat', 'chart'], 'alamat' => ['Alamat', 'map-pin'], 'tampilan' => ['Tampilan', 'palette']];
+    $tabs  = ['profil' => ['Profil', 'user'], 'keamanan' => ['Keamanan', 'lock'], 'fandom' => ['Fandom favorit', 'heart'], 'aktivitas' => ['Aktivitas', 'chart'], 'alamat' => ['Alamat', 'map-pin'], 'tampilan' => ['Tampilan', 'palette']];
     if (! $user->isAdmin()) { $tabs['toko'] = [$user->artistProfile ? 'Toko saya' : 'Buka toko', 'store']; }
     // admin hanya bekerja di panel: tidak perlu fandom favorit, minat, atau alamat pengiriman
     if ($user->isAdmin()) { unset($tabs['fandom'], $tabs['aktivitas'], $tabs['alamat']); }
@@ -56,14 +56,11 @@
                         <x-avatar :user="$user" class="h-28 w-28 text-4xl" />
                         <div wire:loading.flex wire:target="photo,removePhoto" class="absolute inset-0 items-center justify-center rounded-full bg-white/70 text-xs font-bold text-brand-700">Memproses…</div>
                     </div>
-                    <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
-                        <x-icon name="photo" class="h-4 w-4" /> {{ $user->profile_photo ? 'Ganti foto' : 'Unggah foto' }}
-                        <input type="file" wire:model="photo" accept="image/jpeg,image/png,image/webp" class="sr-only">
-                    </label>
+                    @include('livewire.partials.image-positioner', ['kind' => 'photo', 'label' => $user->profile_photo ? 'Ganti foto' : 'Unggah foto'])
                     @if ($user->profile_photo)
                         <button type="button" wire:click="removePhoto" wire:confirm="Hapus foto profil?" class="inline-flex items-center gap-1 text-xs font-bold text-ink-500 hover:text-red-600"><x-icon name="trash" class="h-3.5 w-3.5" /> Hapus foto</button>
                     @endif
-                    <p class="text-center text-[11px] text-ink-400">JPG, PNG, atau WEBP · maks. 2 MB.<br>Langsung tersimpan setelah dipilih.</p>
+                    <p class="text-center text-[11px] text-ink-400">JPG, PNG, atau WEBP · maks. 2 MB.<br>Atur posisi lalu simpan.</p>
                     @if ($user->artistProfile)<p class="text-center text-[11px] font-semibold text-brand-700">Foto ini juga jadi foto tokomu.</p>@endif
                     @error('photo') <p class="ms-error text-center">{{ $message }}</p> @enderror
                 </div>
@@ -105,10 +102,7 @@
                         <div wire:loading.flex wire:target="banner,removeBanner" class="absolute inset-0 items-center justify-center bg-white/70 text-sm font-bold text-brand-700">Memproses…</div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <label class="ms-btn-soft cursor-pointer px-3 py-1.5 text-xs">
-                            <x-icon name="photo" class="h-4 w-4" /> {{ $shopBanner ? 'Ganti banner' : 'Unggah banner' }}
-                            <input type="file" wire:model="banner" accept="image/jpeg,image/png,image/webp" class="sr-only">
-                        </label>
+                        @include('livewire.partials.image-positioner', ['kind' => 'banner', 'label' => $shopBanner ? 'Ganti banner' : 'Unggah banner'])
                         @if ($shopBanner)
                             <button type="button" wire:click="removeBanner" wire:confirm="Hapus banner toko? Toko akan memakai banner bawaan." class="ms-btn-ghost !py-1.5 text-xs text-red-600"><x-icon name="trash" class="h-4 w-4" /> Hapus banner</button>
                         @endif
@@ -170,11 +164,11 @@
                     <h2 class="font-extrabold text-ink-900">Kenapa ditanya fandom?</h2>
                     <div class="flex gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><x-icon name="sparkles" class="h-5 w-5" /></span>
-                        <p class="text-sm text-ink-600">Fandom favorit menjadi isi awal <b>profil minat</b>-mu, jadi beranda langsung bisa menampilkan rekomendasi walau kamu belum pernah melihat atau membeli apa pun.</p>
+                        <p class="text-sm text-ink-600">Fandom favorit membantumu menemukan rekomendasi produk di beranda, bahkan sebelum kamu mulai berbelanja.</p>
                     </div>
                     <div class="flex gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pop-50 text-pop-600"><x-icon name="chart" class="h-5 w-5" /></span>
-                        <p class="text-sm text-ink-600">Setelah itu, produk yang kamu cari, lihat, masukkan keranjang, dan beli ikut membentuk rekomendasi. Lihat di tab <b>Aktivitas &amp; minat</b>.</p>
+                        <p class="text-sm text-ink-600">Produk yang kamu cari, lihat, masukkan keranjang, dan beli juga membantu menyesuaikan rekomendasi.</p>
                     </div>
                     <div class="flex gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600"><x-icon name="heart" class="h-5 w-5" /></span>
@@ -184,40 +178,9 @@
             </div>
         @endif
 
-        {{-- ================= AKTIVITAS & MINAT ================= --}}
+        {{-- ================= AKTIVITAS ================= --}}
         @if ($tab === 'aktivitas')
-            @php
-                $interest = $this->interest;
-                $blocks = ['character' => ['Karakter', 'bobot 0,5'], 'fandom' => ['Fandom', 'bobot 0,3'], 'type' => ['Jenis merch', 'bobot 0,2']];
-                $srcLabel = ['favorite' => 'Fandom favorit', 'search' => 'Pencarian', 'view' => 'Produk dilihat', 'cart' => 'Keranjang', 'purchase' => 'Pembelian'];
-            @endphp
-            <section class="ms-card p-5 sm:p-6">
-                <x-section-heading title="Profil minatmu" icon="sparkles" subtitle="Beginilah sistem rekomendasi (Content-Based Filtering) membaca seleramu." />
-                <div class="grid gap-5 md:grid-cols-3">
-                    @foreach ($blocks as $key => [$label, $weight])
-                        <div class="rounded-2xl bg-ink-50 p-4">
-                            <p class="flex items-baseline justify-between text-sm font-extrabold text-ink-900">{{ $label }} <span class="text-[11px] font-semibold text-ink-400">{{ $weight }}</span></p>
-                            <div class="mt-3 space-y-2.5">
-                                @forelse ($interest[$key] as $row)
-                                    <div>
-                                        <div class="flex justify-between text-xs"><span class="truncate font-semibold text-ink-700">{{ $row['name'] }}</span><span class="text-ink-400">{{ $row['value'] }}</span></div>
-                                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white"><div class="ms-gradient h-full rounded-full" style="width: {{ $row['percent'] }}%"></div></div>
-                                    </div>
-                                @empty
-                                    <p class="text-xs text-ink-400">Belum ada data.</p>
-                                @endforelse
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="mt-5 flex flex-wrap gap-2 text-xs">
-                    @foreach ($interest['sources'] as $src => $n)
-                        <span class="ms-chip-muted">{{ $srcLabel[$src] ?? $src }}: <b class="ml-0.5">{{ $n }}</b></span>
-                    @endforeach
-                </div>
-            </section>
-
-            <section class="mt-8">
+            <section>
                 <x-section-heading title="Terakhir kamu lihat" icon="clock" />
                 @if ($this->recentlyViewed->isEmpty())
                     <x-empty-state icon="eye" title="Belum ada produk yang dilihat" description="Buka beberapa produk di katalog — riwayatnya muncul di sini.">
@@ -248,19 +211,7 @@
                         <label class="block"><span class="ms-label">Label</span><input type="text" wire:model="address_label" class="ms-input" placeholder="Rumah / Kos / Kantor">@error('address_label')<p class="ms-error">{{ $message }}</p>@enderror</label>
                         <label class="block"><span class="ms-label">Nama penerima</span><input type="text" wire:model="recipient_name" class="ms-input">@error('recipient_name')<p class="ms-error">{{ $message }}</p>@enderror</label>
                         <label class="block sm:col-span-2"><span class="ms-label">Alamat lengkap</span><textarea wire:model="full_address" rows="2" class="ms-input" placeholder="Jalan, nomor, RT/RW, kelurahan, kecamatan"></textarea>@error('full_address')<p class="ms-error">{{ $message }}</p>@enderror</label>
-                        <div class="relative block">
-                            <span class="ms-label">Kota / kabupaten</span>
-                            @if ($city_label)<p class="mb-1 text-sm font-bold text-brand-700">{{ $city_label }}</p>@endif
-                            <input type="search" wire:model.live.debounce.300ms="citySearch" class="ms-input" placeholder="Ketik min. 2 huruf, mis. Bandung">
-                            @if ($this->cityResults)
-                                <ul class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-ink-200 bg-white shadow-lg">
-                                    @foreach ($this->cityResults as $c)
-                                        <li><button type="button" wire:click="pickCity(@js($c['id']), @js($c['label']), @js($c['province']))" class="block w-full px-3 py-2 text-left text-sm hover:bg-brand-50">{{ $c['label'] }} <span class="text-xs text-ink-400">{{ $c['province'] }}</span></button></li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                            @error('city_id')<p class="ms-error">{{ $message }}</p>@enderror
-                        </div>
+                        <div class="sm:col-span-2">@include('livewire.partials.location-picker', ['shop' => false])</div>
                         <label class="block"><span class="ms-label">Kode pos</span><input type="text" wire:model="postal_code" class="ms-input"></label>
                         <label class="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input type="checkbox" class="ms-check" wire:model="is_primary"> Jadikan alamat utama</label>
                         <div class="flex gap-2 sm:col-span-2"><button type="submit" class="ms-btn-primary">Simpan alamat</button><button type="button" wire:click="$set('addressForm', false)" class="ms-btn-ghost">Batal</button></div>
@@ -322,19 +273,7 @@
                     </div>
                     <label class="block"><span class="ms-label">Alamat lengkap toko</span><textarea wire:model="shop_address" rows="2" class="ms-input" placeholder="Jalan, nomor, RT/RW, kelurahan, kecamatan"></textarea>@error('shop_address')<p class="ms-error">{{ $message }}</p>@enderror</label>
                     <div class="grid gap-4 sm:grid-cols-[2fr_1fr]">
-                        <div class="relative">
-                            <span class="ms-label">Kota / kabupaten</span>
-                            @if ($shop_city_label)<p class="mb-1 text-sm font-bold text-brand-700">{{ $shop_city_label }}</p>@endif
-                            <input type="search" wire:model.live.debounce.300ms="shopCitySearch" class="ms-input" placeholder="{{ $shop_city_label ? 'Ganti kota…' : 'Ketik min. 2 huruf, mis. Bandung' }}">
-                            @if ($this->shopCityResults)
-                                <ul class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-ink-200 bg-white shadow-lg">
-                                    @foreach ($this->shopCityResults as $c)
-                                        <li><button type="button" wire:click="pickShopCity(@js($c['id']), @js($c['label']), @js($c['province']))" class="block w-full px-3 py-2 text-left text-sm hover:bg-brand-50">{{ $c['label'] }} <span class="text-xs text-ink-400">{{ $c['province'] }}</span></button></li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                            @error('shop_city_id')<p class="ms-error">{{ $message }}</p>@enderror
-                        </div>
+                        <div>@include('livewire.partials.location-picker', ['shop' => true])</div>
                         <label class="block"><span class="ms-label">Kode pos</span><input type="text" wire:model="shop_postal_code" class="ms-input">@error('shop_postal_code')<p class="ms-error">{{ $message }}</p>@enderror</label>
                     </div>
                 </div>

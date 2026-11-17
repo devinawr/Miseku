@@ -39,18 +39,4 @@
         </button>
     </form>
 
-    {{-- Akun contoh, khusus tahap bimbingan --}}
-    <div class="mt-8 rounded-2xl border border-dashed border-ink-300 p-4">
-        <p class="text-xs font-extrabold tracking-wide text-ink-400 uppercase">Akun contoh (tahap bimbingan)</p>
-        <div class="mt-2 space-y-1 text-xs">
-            @foreach ([['buyer1@miseku.test', 'Pembeli'], ['kirara@miseku.test', 'Artis'], ['admin@miseku.test', 'Admin']] as [$mail, $label])
-                <button type="button" wire:click="$set('email', '{{ $mail }}')"
-                        class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left transition hover:bg-brand-50">
-                    <span class="font-mono text-ink-700">{{ $mail }}</span>
-                    <span class="ms-chip bg-ink-100 text-ink-600">{{ $label }}</span>
-                </button>
-            @endforeach
-        </div>
-        <p class="mt-2 text-xs text-ink-400">Password semuanya <b class="font-mono text-ink-600">password</b>. Klik untuk mengisi email.</p>
-    </div>
 </div>

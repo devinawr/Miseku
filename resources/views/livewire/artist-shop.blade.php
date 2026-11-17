@@ -112,6 +112,28 @@
                                 @if ($review->comment)
                                     <p class="mt-2 text-sm leading-relaxed text-ink-600">{{ $review->comment }}</p>
                                 @endif
+                                @php $items = $review->order?->items->unique('product_id'); @endphp
+                                <div class="mt-4 border-t border-ink-100 pt-3">
+                                    <p class="text-xs font-semibold text-ink-500">Produk dalam pesanan ini</p>
+                                    @if ($items && $items->isNotEmpty())
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach ($items as $item)
+                                                @if ($item->product)
+                                                    <a href="{{ route('product.detail', $item->product) }}" wire:navigate class="inline-flex max-w-full items-center gap-2 rounded-xl bg-ink-50 p-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 hover:underline">
+                                                        <img src="{{ $item->product->cover_url }}" alt="" class="h-10 w-10 shrink-0 rounded-lg object-cover">
+                                                        <span>{{ $item->product->product_name }}</span>
+                                                    </a>
+                                                @else
+                                                    <span class="rounded-xl bg-ink-50 px-3 py-2 text-xs text-ink-500">Produk tidak tersedia</span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @elseif ($review->order?->order_type === 'custom')
+                                        <p class="mt-1 text-xs text-ink-500">Pesanan custom tidak terhubung ke produk katalog.</p>
+                                    @else
+                                        <p class="mt-1 text-xs text-ink-500">Rincian produk tidak tersedia.</p>
+                                    @endif
+                                </div>
                             </div>
                         </article>
                     @empty

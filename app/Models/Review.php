@@ -18,6 +18,12 @@ class Review extends Model
         return ['rating' => 'integer', 'created_at' => 'datetime'];
     }
 
+    /** Ulasan toko berkaitan dengan pesanan, bukan satu produk tertentu. */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(CustomerOrder::class, 'customer_order_id');
+    }
+
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id');

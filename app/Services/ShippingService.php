@@ -22,33 +22,67 @@ class ShippingService
         return filled(config('services.rajaongkir.key'));
     }
 
-    /** Cari kota/kecamatan tujuan. Hasil: [['id','label','province']] */
-    public function searchCities(string $term, int $limit = 12): array
+    /** Daftar provinsi atau kota dari API; kegagalan tidak disamarkan sebagai data API. */
+    public function regionOptions(string $type, string $parent = ''): array
+    {
+        if (! $this->isLive()) {
+            if ($type === 'province') {
+                return ['items' => collect(Cities::LIST)->pluck(1)->unique()->sort()->values()->map(fn ($name) => ['id' => $name, 'name' => $name])->all(), 'error' => false];
+            }
+            return ['items' => collect(Cities::LIST)->filter(fn ($c) => $c[1] === $parent)->map(fn ($c, $id) => ['id' => (string) $id, 'name' => $c[0]])->sortBy('name')->values()->all(), 'error' => false];
+        }
+        if (! in_array($type, ['province', 'city'], true) || ($type === 'city' && ! ctype_digit($parent))) {
+            return ['items' => [], 'error' => true];
+        }
+        $path = $type === 'province' ? '/destination/province' : '/destination/city/' . $parent;
+        $cacheKey = 'ro_regions_' . $type . '_' . $parent;
+        if ($cached = Cache::get($cacheKey)) {
+            return ['items' => $cached, 'error' => false];
+        }
+        try {
+            $res = Http::withHeaders(['key' => config('services.rajaongkir.key')])->timeout(10)->get(config('services.rajaongkir.base_url') . $path);
+            if ($res->successful() && is_array($res->json('data'))) {
+                $items = collect($res->json('data'))->filter(fn ($r) => isset($r['id'], $r['name']))->map(fn ($r) => ['id' => (string) $r['id'], 'name' => (string) $r['name']])->sortBy('name')->values()->all();
+                if ($items) Cache::put($cacheKey, $items, now()->addHours(24));
+                return ['items' => $items, 'error' => false];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('RajaOngkir daftar wilayah gagal: ' . $e->getMessage());
+        }
+        return ['items' => [], 'error' => true];
+    }
+
+    /** Hasil ID berasal dari Search Domestic Destination, sesuai endpoint ongkir yang dipakai. */
+    public function lookupCities(string $term, int $limit = 50, int $offset = 0): array
     {
         $term = trim($term);
-
-        if ($this->isLive() && mb_strlen($term) >= 3) {
-            try {
-                $res = Http::withHeaders(['key' => config('services.rajaongkir.key')])->timeout(10)
-                    ->get(config('services.rajaongkir.base_url') . '/destination/domestic-destination', ['search' => $term, 'limit' => $limit, 'offset' => 0]);
-
-                if ($res->successful()) {
-                    return collect($res->json('data') ?? [])->map(function ($row) {
-                        $item = ['id' => (string) $row['id'], 'label' => $row['label'] ?? ($row['city_name'] ?? ''), 'province' => $row['province_name'] ?? ''];
-                        Cache::put('ro_city_' . $item['id'], $item['label'], now()->addDays(30));
-
-                        return $item;
-                    })->all();
-                }
-            } catch (\Throwable $e) {
-                Log::warning('RajaOngkir search gagal: ' . $e->getMessage());
-            }
+        if (mb_strlen($term) < 3) return ['items' => [], 'error' => false];
+        if (! $this->isLive()) {
+            $items = collect(Cities::LIST)->filter(fn ($c) => str_contains(mb_strtolower($c[0] . ' ' . $c[1]), mb_strtolower($term)))
+                ->map(fn ($c, $id) => ['id' => (string) $id, 'label' => $c[0], 'province' => $c[1]])->sortBy('label')->values()->slice($offset, $limit)->values()->all();
+            return ['items' => $items, 'error' => false];
         }
+        try {
+            $res = Http::withHeaders(['key' => config('services.rajaongkir.key')])->timeout(10)
+                ->get(config('services.rajaongkir.base_url') . '/destination/domestic-destination', ['search' => $term, 'limit' => $limit, 'offset' => $offset]);
+            if ($res->status() === 404) return ['items' => [], 'error' => false];
+            if ($res->successful() && is_array($res->json('data'))) {
+                $items = collect($res->json('data'))->filter(fn ($row) => isset($row['id']))->map(function ($row) {
+                    $item = ['id' => (string) $row['id'], 'label' => (string) ($row['label'] ?? $row['city_name'] ?? ''), 'province' => (string) ($row['province_name'] ?? '')];
+                    Cache::put('ro_city_' . $item['id'], $item['label'], now()->addDays(30));
+                    return $item;
+                })->values()->all();
+                return ['items' => $items, 'error' => false];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('RajaOngkir search gagal: ' . $e->getMessage());
+        }
+        return ['items' => [], 'error' => true];
+    }
 
-        return collect(Cities::LIST)
-            ->filter(fn ($c) => $term === '' || str_contains(mb_strtolower($c[0] . ' ' . $c[1]), mb_strtolower($term)))
-            ->map(fn ($c, $id) => ['id' => (string) $id, 'label' => $c[0], 'province' => $c[1]])
-            ->sortBy('label')->take($limit)->values()->all();
+    public function searchCities(string $term, int $limit = 12): array
+    {
+        return $this->lookupCities($term, $limit)['items'];
     }
 
     public function cityName(?string $id): ?string
@@ -57,7 +91,7 @@ class ShippingService
             return null;
         }
 
-        return Cities::LIST[$id][0] ?? Cache::get('ro_city_' . $id);
+        return Cache::get('ro_city_' . $id) ?? (Cities::LIST[$id][0] ?? null);
     }
 
     public function provinceOf(string $id): ?string
