@@ -24,7 +24,7 @@
         <div class="space-y-6 lg:col-span-7">
             <section class="ms-card p-5">
                 <h3 class="font-extrabold text-ink-900">Proses otomatis (timer BPMN)</h3>
-                <p class="mt-1 text-sm text-ink-600">Berjalan tiap 15 menit lewat <code class="rounded bg-ink-100 px-1">php artisan schedule:work</code>. Tombol ini menjalankannya sekarang (sama dengan <code class="rounded bg-ink-100 px-1">php artisan miseku:tick</code>).</p>
+                <p class="mt-1 text-sm text-ink-600">Berjalan otomatis saat halaman dibuka (maks. 1×/menit) dan tiap 15 menit lewat <code class="rounded bg-ink-100 px-1">php artisan schedule:work</code> / cron. Tombol ini menjalankannya sekarang (sama dengan <code class="rounded bg-ink-100 px-1">php artisan miseku:tick</code>).</p>
                 <button type="button" wire:click="runAutomation" class="ms-btn-soft mt-3"><x-icon name="refresh" class="h-4.5 w-4.5" /> Jalankan sekarang</button>
                 @if ($lastRun)
                     <ul class="mt-3 grid gap-1 text-sm sm:grid-cols-2">

@@ -10,6 +10,29 @@
         @endforeach
     </div>
 
+    {{-- Tab PO: semua pesanan pre-order, bisa difilter per batch --}}
+    @if ($tab === 'po')
+        <div class="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 ring-1 ring-brand-100">
+            <x-icon name="clock" class="h-5 w-5 shrink-0 text-brand-600" />
+            <p class="text-sm font-bold text-brand-800">
+                @if ($currentBatch)
+                    Pesanan PO {{ $currentBatch->product?->product_name }} · Batch #{{ $currentBatch->id }} <span class="font-normal text-brand-700">({{ $currentBatch->status_label }})</span>
+                @else
+                    Semua pesanan pre-order
+                @endif
+            </p>
+            <select wire:model.live="batch" class="ms-input ml-auto !w-auto !py-2 text-sm">
+                <option value="">Semua batch</option>
+                @foreach ($batches as $bt)
+                    <option value="{{ $bt->id }}">Batch #{{ $bt->id }} · {{ $bt->product?->product_name }}</option>
+                @endforeach
+            </select>
+            @if ($currentBatch)
+                <button type="button" wire:click="$set('batch', null)" class="ms-btn-ghost !py-2 text-sm">Lihat semua PO</button>
+            @endif
+        </div>
+    @endif
+
     <div class="ms-card overflow-x-auto">
         <table class="w-full min-w-[720px] text-sm">
             <thead class="bg-ink-50 text-left text-xs font-bold tracking-wide text-ink-500 uppercase">
@@ -21,6 +44,7 @@
                         <td class="px-4 py-3">
                             <a href="{{ route('studio.orders.show', $o) }}" wire:navigate class="font-mono text-xs font-bold text-brand-700 hover:underline">{{ $o->order_code }}</a>
                             <p class="max-w-56 truncate text-ink-600">{{ $o->order_type === 'custom' ? 'Custom: ' . $o->customRequest?->design_character : $o->items->map(fn ($i) => $i->quantity . '× ' . $i->product?->product_name)->implode(', ') }}</p>
+                            @if ($o->order_type === 'pre_order' && ($bt = $o->items->first()?->batch))<p class="text-xs text-ink-400">Batch #{{ $bt->id }} · {{ $bt->status_label }}</p>@endif
                             @if ($o->cancellations->whereIn('cancellation_status', ['submitted', 'in_discussion'])->isNotEmpty())<span class="ms-chip bg-red-50 text-red-600">Pengajuan batal</span>@endif
                             @if ($o->returns->whereIn('return_status', ['submitted', 'processing'])->isNotEmpty())<span class="ms-chip bg-red-50 text-red-600">Retur</span>@endif
                         </td>

@@ -3,6 +3,7 @@
 namespace App\Livewire\Studio;
 
 use App\Models\CustomerOrder;
+use App\Models\PoBatch;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -24,6 +25,7 @@ class Orders extends Component
         'selesai'  => ['Selesai', ['completed']],
         'batal'    => ['Batal / gagal', ['cancelled', 'failed']],
         'bayar'    => ['Belum dibayar', ['awaiting_payment']],
+        'po'       => ['Pre-order (PO)', null],
         'semua'    => ['Semua', null],
     ];
 
@@ -33,8 +35,28 @@ class Orders extends Component
     #[Url]
     public string $q = '';
 
+    /** Filter pesanan PO per batch (dari tombol "Pesanan" di menu Batch PO). Kosong = semua PO. */
+    #[Url]
+    public ?int $batch = null;
+
+    public function mount(): void
+    {
+        if ($this->batch) {
+            $this->tab = 'po';
+        }
+    }
+
     public function updatedTab(): void
     {
+        if ($this->tab !== 'po') {
+            $this->batch = null;
+        }
+        $this->resetPage();
+    }
+
+    public function updatedBatch(): void
+    {
+        $this->batch = $this->batch ?: null;
         $this->resetPage();
     }
 
@@ -50,7 +72,9 @@ class Orders extends Component
 
         $orders = CustomerOrder::where('artist_profile_id', $profile->id)
             ->where('order_type', '!=', 'ots_event')
-            ->with(['buyer', 'items.product.primaryImage', 'customRequest', 'cancellations', 'returns'])
+            ->with(['buyer', 'items.product.primaryImage', 'items.batch', 'customRequest', 'cancellations', 'returns'])
+            ->when($this->tab === 'po', fn ($w) => $w->where('order_type', 'pre_order')
+                ->when($this->batch, fn ($x) => $x->whereHas('items', fn ($i) => $i->where('po_batch_id', $this->batch))))
             ->when($this->tab === 'tindakan', fn ($w) => $w->where(function ($x) {
                 $x->where(fn ($r) => $r->where('order_type', 'ready_stock')->where('order_status', 'paid'))
                     ->orWhere(fn ($r) => $r->where('order_type', 'custom')->whereIn('order_status', ['paid', 'awaiting_production', 'in_production']))
@@ -64,6 +88,12 @@ class Orders extends Component
             ->orderByRaw('shipping_deadline IS NULL, shipping_deadline')->latest('created_at')->latest('id')
             ->paginate(15);
 
-        return view('livewire.studio.orders', compact('orders'));
+        // pilihan batch untuk filter di tab PO (hanya batch milik toko ini)
+        $batches = $this->tab === 'po'
+            ? PoBatch::whereHas('product', fn ($q) => $q->where('artist_profile_id', $profile->id))->with('product:id,product_name')->latest('id')->get()
+            : collect();
+        $currentBatch = $this->batch ? $batches->firstWhere('id', $this->batch) : null;
+
+        return view('livewire.studio.orders', compact('orders', 'batches', 'currentBatch'));
     }
 }

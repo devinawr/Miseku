@@ -88,10 +88,16 @@ class MidtransGateway
         return $res->successful() ? $res->json() : null;
     }
 
-    /** Verifikasi signature_key webhook: sha512(order_id + status_code + gross_amount + server_key). */
+       /**
+     * Verifikasi signature_key webhook:
+     * sha512(order_id + status_code + gross_amount + key).
+     * Memakai Signature Secret Key bila diisi; bila kosong, memakai Server Key.
+     */
     public function verifySignature(array $payload): bool
     {
-        $expected = hash('sha512', ($payload['order_id'] ?? '') . ($payload['status_code'] ?? '') . ($payload['gross_amount'] ?? '') . config('services.midtrans.server_key'));
+        $key = config('services.midtrans.signature_secret_key') ?: config('services.midtrans.server_key');
+
+        $expected = hash('sha512', ($payload['order_id'] ?? '') . ($payload['status_code'] ?? '') . ($payload['gross_amount'] ?? '') . $key);
 
         return hash_equals($expected, (string) ($payload['signature_key'] ?? ''));
     }

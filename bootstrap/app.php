@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Artis: catat mode Studio / mode belanja supaya chat, notifikasi & akun tidak campur
         $middleware->appendToGroup('web', \App\Http\Middleware\TrackStudioMode::class);
 
+        // PO lewat tanggal tutup / voting berakhir / tenggat lain diproses otomatis saat halaman dibuka (maks. 1x/menit)
+        $middleware->appendToGroup('web', \App\Http\Middleware\RunAutomationOnRequest::class);
+
         // Webhook Midtrans dipanggil server Midtrans (tanpa token CSRF)
         $middleware->validateCsrfTokens(except: ['midtrans/*']);
 

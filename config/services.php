@@ -29,10 +29,11 @@ return [
     ],
 
     // Midtrans Snap (sandbox). Kosongkan server key → aplikasi memakai mode simulasi pembayaran.
-    'midtrans' => [
-        'server_key'    => env('MIDTRANS_SERVER_KEY'),
-        'client_key'    => env('MIDTRANS_CLIENT_KEY'),
-        'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
+       'midtrans' => [
+        'server_key'           => env('MIDTRANS_SERVER_KEY'),
+        'client_key'           => env('MIDTRANS_CLIENT_KEY'),
+        'signature_secret_key' => env('MIDTRANS_SIGNATURE_SECRET_KEY'),
+        'is_production'        => (bool) env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
     // RajaOngkir (Komerce). Kosongkan key → ongkir dihitung dari tabel tarif lokal (simulasi).

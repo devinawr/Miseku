@@ -11,6 +11,9 @@
 */
 
 return [
+    // Jalankan proses otomatis (miseku:tick) saat halaman dibuka, maks. 1x/menit — tanpa perlu schedule:work
+    'auto_tick_on_request' => env('MISEKU_AUTO_TICK', true),
+
     // BPMN 2 — tenggat pelunasan DP sejak tagihan pelunasan terbit (hari)
     'settlement_days' => 14,
 

@@ -30,7 +30,7 @@
                     @elseif ($b->batch_status === 'in_production')
                         <button type="button" wire:click="complete({{ $b->id }})" wire:confirm="Tandai produksi batch ini selesai? Pembeli DP menerima tagihan pelunasan ({{ config('miseku.settlement_days') }} hari)." class="ms-btn-primary">Produksi selesai</button>
                     @endif
-                    <a href="{{ route('studio.orders', ['tab' => 'semua', 'q' => '']) }}" wire:navigate class="ms-btn-ghost">Pesanan</a>
+                    <a href="{{ route('studio.orders', ['tab' => 'po', 'batch' => $b->id]) }}" wire:navigate class="ms-btn-ghost">Pesanan</a>
                 </div>
             </div>
         @empty

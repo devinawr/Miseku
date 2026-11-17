@@ -145,6 +145,11 @@ class NotificationService
                 : ($viewer->isAdmin() ? route('admin.transactions', ['q' => $note->order->order_code]) : route('studio.orders.show', $note->customer_order_id));
         }
 
+        // Notifikasi PO untuk artis (ditutup / gagal target) tidak terikat satu pesanan → menu Batch PO
+        if ($note->notification_type === 'order' && $viewer->isArtist() && str_starts_with($note->title, 'PO ')) {
+            return route('studio.batches');
+        }
+
         return match ($note->notification_type) {
             'withdrawal'  => $viewer->isAdmin() ? route('admin.withdrawals') : route('studio.balance'),
             'attribute'   => $viewer->isAdmin() ? route('admin.approvals') : route('studio.dashboard'),
