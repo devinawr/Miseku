@@ -110,14 +110,22 @@
                         @endfor
                     </div>
                     <textarea wire:model="buyerComment" rows="2" class="ms-input" placeholder="Komentar (opsional)"></textarea>
-                    <button type="button" wire:click="reviewBuyer" class="ms-btn-primary w-full">Kirim ulasan</button>
+                    @include('livewire.partials.review-photo-input', ['field' => 'buyerPhotos', 'photos' => $buyerPhotos, 'label' => 'Foto ulasan pembeli'])
+                    <button type="button" wire:click="reviewBuyer" wire:loading.attr="disabled" wire:target="buyerPhotos,reviewBuyer" class="ms-btn-primary w-full">Kirim ulasan</button>
                 </section>
             @endif
             @if ($myReview || $buyerReview)
                 <section class="ms-card space-y-2 p-5 text-sm">
                     <h3 class="font-extrabold text-ink-900">Ulasan</h3>
-                    @if ($buyerReview)<p><b>Pembeli → toko:</b> <span class="text-amber-500">{{ str_repeat('★', $buyerReview->rating) }}</span> {{ $buyerReview->comment }}</p>@endif
-                    @if ($myReview)<p><b>Kamu → pembeli:</b> <span class="text-amber-500">{{ str_repeat('★', $myReview->rating) }}</span> {{ $myReview->comment }}</p>@endif
+                    @if ($buyerReview)
+                        <div><p><b>Pembeli → toko:</b> <span class="text-amber-500">{{ str_repeat('★', $buyerReview->rating) }}</span> {{ $buyerReview->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $buyerReview->photos])</div>
+                    @endif
+                    @foreach ($o->productReviews as $pr)
+                        <div><p><b>Produk:</b> <span class="text-amber-500">{{ str_repeat('★', $pr->rating) }}</span> {{ $pr->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $pr->photos])</div>
+                    @endforeach
+                    @if ($myReview)
+                        <div><p><b>Kamu → pembeli:</b> <span class="text-amber-500">{{ str_repeat('★', $myReview->rating) }}</span> {{ $myReview->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $myReview->photos])</div>
+                    @endif
                 </section>
             @endif
 

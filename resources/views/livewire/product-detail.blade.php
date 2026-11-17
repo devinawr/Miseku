@@ -286,6 +286,7 @@
                             @if ($review->comment)
                                 <p class="mt-1.5 text-sm leading-relaxed text-ink-600">{{ $review->comment }}</p>
                             @endif
+                            @include('livewire.partials.review-photos', ['photos' => $review->photos])
                         </div>
                     </article>
                 @empty

@@ -13,12 +13,13 @@ use App\Services\ReviewService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /** Detail pesanan untuk artis: produksi, kirim/pick-up, pembatalan, retur, ulasan pembeli. */
 #[Layout('components.layouts.app')]
 class OrderShow extends Component
 {
-    use RunsActions;
+    use RunsActions, WithFileUploads;
 
     public CustomerOrder $order;
 
@@ -33,6 +34,8 @@ class OrderShow extends Component
     public int $buyerRating = 5;
 
     public string $buyerComment = '';
+
+    public array $buyerPhotos = [];
 
     public function mount(CustomerOrder $order): void
     {
@@ -114,8 +117,16 @@ class OrderShow extends Component
 
     public function reviewBuyer(): void
     {
-        $this->validate(['buyerRating' => 'required|integer|min:1|max:5', 'buyerComment' => 'nullable|string|max:1000']);
-        $this->attempt(fn () => app(ReviewService::class)->submitArtist($this->order, Auth::user(), $this->buyerRating, $this->buyerComment), 'Ulasan untuk pembeli tersimpan.');
+        $this->validate([
+            'buyerRating' => 'required|integer|min:1|max:5', 'buyerComment' => 'nullable|string|max:1000',
+            'buyerPhotos' => 'array|max:4', 'buyerPhotos.*' => 'image|mimes:jpg,jpeg,png,webp|max:4096',
+        ], [
+            'buyerPhotos.max' => 'Maksimal 4 foto untuk ulasan pembeli.',
+            'buyerPhotos.*.image' => 'Foto ulasan pembeli harus berupa gambar.',
+            'buyerPhotos.*.mimes' => 'Foto ulasan pembeli harus berformat JPG, PNG, atau WEBP.',
+            'buyerPhotos.*.max' => 'Setiap foto ulasan pembeli maksimal 4 MB.',
+        ]);
+        $this->attempt(fn () => app(ReviewService::class)->submitArtist($this->order, Auth::user(), $this->buyerRating, $this->buyerComment, $this->buyerPhotos), 'Ulasan untuk pembeli tersimpan.');
         $this->done();
     }
 
@@ -123,7 +134,7 @@ class OrderShow extends Component
     {
         $o = $this->order->load([
             'items.product.primaryImage', 'items.batch', 'artistProfile', 'buyer', 'address', 'booth.event', 'customRequest.merchandiseType',
-            'payments' => fn ($q) => $q->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews', 'productReviews',
+            'payments' => fn ($q) => $q->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews.photos', 'productReviews.photos',
         ]);
 
         return view('livewire.studio.order-show', [

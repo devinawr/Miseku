@@ -112,6 +112,7 @@
                                 @if ($review->comment)
                                     <p class="mt-2 text-sm leading-relaxed text-ink-600">{{ $review->comment }}</p>
                                 @endif
+                                @include('livewire.partials.review-photos', ['photos' => $review->photos])
                                 @php $items = $review->order?->items->unique('product_id'); @endphp
                                 <div class="mt-4 border-t border-ink-100 pt-3">
                                     <p class="text-xs font-semibold text-ink-500">Produk dalam pesanan ini</p>

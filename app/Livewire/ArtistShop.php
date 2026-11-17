@@ -63,6 +63,7 @@ class ArtistShop extends Component
         return $this->artist->shopReviews()
             ->with([
                 'reviewer:id,name,profile_photo',
+                'photos',
                 'order.items.product' => fn ($query) => $query->visible()->with('primaryImage'),
             ])
             ->latest('created_at')

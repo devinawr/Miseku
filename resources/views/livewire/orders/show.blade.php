@@ -99,6 +99,7 @@
                                 @endfor
                             </div>
                             <textarea wire:model="shopComment" rows="2" class="ms-input mt-1" placeholder="Pelayanan artis (opsional)"></textarea>
+                            @include('livewire.partials.review-photo-input', ['field' => 'shopPhotos', 'photos' => $shopPhotos, 'label' => 'Foto ulasan toko'])
                         </div>
                         @foreach ($o->items as $item)
                             <div wire:key="rv-{{ $item->product_id }}">
@@ -109,9 +110,10 @@
                                     @endfor
                                 </div>
                                 <textarea wire:model="productReviews.{{ $item->product_id }}.comment" rows="2" class="ms-input mt-1" placeholder="Kualitas produk (opsional)"></textarea>
+                                @include('livewire.partials.review-photo-input', ['field' => 'productPhotos.' . $item->product_id, 'photos' => $productPhotos[$item->product_id] ?? [], 'label' => 'Foto ulasan ' . ($item->product?->product_name ?? 'produk')])
                             </div>
                         @endforeach
-                        <button type="button" wire:click="submitReview" class="ms-btn-primary w-full">Kirim ulasan</button>
+                        <button type="button" wire:click="submitReview" wire:loading.attr="disabled" wire:target="shopPhotos,productPhotos,submitReview" class="ms-btn-primary w-full">Kirim ulasan</button>
                     </section>
                 @endif
             @endif
@@ -119,9 +121,15 @@
             @if ($myReview || $artistReview)
                 <section class="ms-card space-y-2 p-5 text-sm">
                     <h3 class="font-extrabold text-ink-900">Ulasan</h3>
-                    @if ($myReview)<p><b>Pembeli → toko:</b> <span class="text-amber-500">{{ str_repeat('★', $myReview->rating) }}</span> {{ $myReview->comment }}</p>@endif
-                    @foreach ($o->productReviews as $pr)<p><b>Produk:</b> <span class="text-amber-500">{{ str_repeat('★', $pr->rating) }}</span> {{ $pr->comment }}</p>@endforeach
-                    @if ($artistReview)<p><b>Artis → pembeli:</b> <span class="text-amber-500">{{ str_repeat('★', $artistReview->rating) }}</span> {{ $artistReview->comment }}</p>@endif
+                    @if ($myReview)
+                        <div><p><b>Pembeli → toko:</b> <span class="text-amber-500">{{ str_repeat('★', $myReview->rating) }}</span> {{ $myReview->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $myReview->photos])</div>
+                    @endif
+                    @foreach ($o->productReviews as $pr)
+                        <div><p><b>Produk:</b> <span class="text-amber-500">{{ str_repeat('★', $pr->rating) }}</span> {{ $pr->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $pr->photos])</div>
+                    @endforeach
+                    @if ($artistReview)
+                        <div><p><b>Artis → pembeli:</b> <span class="text-amber-500">{{ str_repeat('★', $artistReview->rating) }}</span> {{ $artistReview->comment }}</p>@include('livewire.partials.review-photos', ['photos' => $artistReview->photos])</div>
+                    @endif
                 </section>
             @endif
 

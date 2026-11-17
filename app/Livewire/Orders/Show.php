@@ -36,6 +36,11 @@ class Show extends Component
 
     public string $shopComment = '';
 
+    public array $shopPhotos = [];
+
+    /** product_id => daftar foto untuk ulasan produk itu */
+    public array $productPhotos = [];
+
     /** product_id => ['rating' => int, 'comment' => string] */
     public array $productReviews = [];
 
@@ -125,9 +130,23 @@ class Show extends Component
             'shopComment'              => 'nullable|string|max:1000',
             'productReviews.*.rating'  => 'nullable|integer|min:1|max:5',
             'productReviews.*.comment' => 'nullable|string|max:1000',
+            'shopPhotos'               => 'array|max:4',
+            'shopPhotos.*'             => 'image|mimes:jpg,jpeg,png,webp|max:4096',
+            'productPhotos'            => 'array',
+            'productPhotos.*'          => 'array|max:4',
+            'productPhotos.*.*'        => 'image|mimes:jpg,jpeg,png,webp|max:4096',
+        ], [
+            'shopPhotos.max' => 'Maksimal 4 foto untuk ulasan toko.',
+            'productPhotos.*.max' => 'Maksimal 4 foto untuk setiap ulasan produk.',
+            'shopPhotos.*.image' => 'Foto ulasan toko harus berupa gambar.',
+            'shopPhotos.*.mimes' => 'Foto ulasan toko harus berformat JPG, PNG, atau WEBP.',
+            'shopPhotos.*.max' => 'Setiap foto ulasan toko maksimal 4 MB.',
+            'productPhotos.*.*.image' => 'Foto ulasan produk harus berupa gambar.',
+            'productPhotos.*.*.mimes' => 'Foto ulasan produk harus berformat JPG, PNG, atau WEBP.',
+            'productPhotos.*.*.max' => 'Setiap foto ulasan produk maksimal 4 MB.',
         ]);
 
-        $this->attempt(fn () => app(ReviewService::class)->submitBuyer($this->order, Auth::user(), $this->shopRating, $this->shopComment, $this->productReviews), 'Ulasan terkirim. Terima kasih!');
+        $this->attempt(fn () => app(ReviewService::class)->submitBuyer($this->order, Auth::user(), $this->shopRating, $this->shopComment, $this->productReviews, $this->shopPhotos, $this->productPhotos), 'Ulasan terkirim. Terima kasih!');
         $this->reload();
     }
 
@@ -135,7 +154,7 @@ class Show extends Component
     {
         $o = $this->order->load([
             'items.product.primaryImage', 'items.batch', 'artistProfile.user', 'address', 'booth.event', 'customRequest.merchandiseType',
-            'payments' => fn ($q) => $q->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews', 'productReviews',
+            'payments' => fn ($q) => $q->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews.photos', 'productReviews.photos',
         ]);
 
         $returns = app(ReturnService::class);

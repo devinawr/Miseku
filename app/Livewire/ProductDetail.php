@@ -181,7 +181,7 @@ class ProductDetail extends Component
     public function reviews()
     {
         return $this->product->productReviews()
-            ->with('reviewer:id,name,profile_photo')
+            ->with(['reviewer:id,name,profile_photo', 'photos'])
             ->latest('created_at')
             ->take(8)
             ->get();
