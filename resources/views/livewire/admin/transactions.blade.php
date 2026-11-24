@@ -24,7 +24,13 @@
                             <td class="px-4 py-3">{{ $o->type_label }}{{ $o->isDp() ? ' · DP' : '' }}</td>
                             <td class="px-4 py-3 text-right font-bold"><x-rupiah :value="$o->total_amount" /></td>
                             <td class="px-4 py-3 text-right"><x-rupiah :value="$o->admin_fee" /></td>
-                            <td class="px-4 py-3"><x-order-status :order="$o" /></td>
+                            <td class="px-4 py-3"><x-order-status :order="$o" />
+                                @if ($o->order_status === 'shipped' && $o->shipping_method === 'courier')
+                                    @if ($o->delivered_at)<p class="mt-1 text-xs">Tiba dicatat: {{ $o->delivered_at->translatedFormat('d M Y H:i') }}</p>
+                                    @else <button class="ms-link mt-1 text-xs" wire:click="markDelivered({{ $o->id }})" wire:confirm="Pastikan bukti kurir menunjukkan paket sudah diterima. Catat waktu sekarang?">Catat tiba (setelah verifikasi kurir)</button> @endif
+                                    <br><button class="ms-link text-xs" wire:click="toggleAutoHold({{ $o->id }})">{{ $o->auto_complete_hold ? 'Lepas penundaan otomatis' : 'Tunda penyelesaian otomatis (kendala)' }}</button>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

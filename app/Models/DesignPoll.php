@@ -11,11 +11,11 @@ class DesignPoll extends Model
 {
     protected $table = 'design_poll';
 
-    protected $fillable = ['artist_profile_id', 'poll_title', 'description', 'start_date', 'end_date', 'poll_status'];
+    protected $fillable = ['artist_profile_id', 'fandom_id', 'open_notified_at', 'poll_title', 'description', 'start_date', 'end_date', 'poll_status'];
 
     protected function casts(): array
     {
-        return ['start_date' => 'datetime', 'end_date' => 'datetime'];
+        return ['start_date' => 'datetime', 'end_date' => 'datetime', 'open_notified_at' => 'datetime'];
     }
 
     public function artistProfile(): BelongsTo

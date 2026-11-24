@@ -36,7 +36,7 @@ class AutomationService
 
     public function run(): array
     {
-        $log = ['expired' => 0, 'po_closed' => 0, 'polls' => 0, 'settle_remind' => 0, 'settle_fail' => 0, 'ship_remind' => 0, 'ship_cancel' => 0, 'pickup_forfeit' => 0];
+        $log = ['expired' => 0, 'po_closed' => 0, 'polls' => 0, 'settle_remind' => 0, 'settle_fail' => 0, 'ship_remind' => 0, 'ship_cancel' => 0, 'pickup_forfeit' => 0, 'poll_opened' => 0, 'auto_completed' => 0];
 
         // 1) tagihan kedaluwarsa
         Payment::where('payment_status', 'pending')->where('payment_type', '!=', 'refund')
@@ -51,6 +51,12 @@ class AutomationService
             $this->po->evaluate($b);
             $log['po_closed']++;
         });
+
+        // Voting baru terbuka: hanya yang memilih fandom, dan satu kali.
+        DesignPoll::where('poll_status', 'running')->whereNotNull('fandom_id')->whereNull('open_notified_at')
+            ->where('start_date', '<=', now())->where('end_date', '>=', now())->get()->each(function (DesignPoll $poll) use (&$log) {
+                if ($this->polls->announceOpening($poll)) $log['poll_opened']++;
+            });
 
         // 3) voting berakhir
         DesignPoll::where('poll_status', 'running')->where('end_date', '<', now())->get()->each(function (DesignPoll $poll) use (&$log) {
@@ -88,6 +94,13 @@ class AutomationService
             ->get()->each(function (CustomerOrder $o) use (&$log) {
                 $this->eventEnded($o);
                 $log['pickup_forfeit']++;
+            });
+
+        // Hanya setelah kedatangan terverifikasi, tidak berdasarkan tanggal kirim.
+        CustomerOrder::where('order_status', 'shipped')->whereNotNull('delivered_at')->where('auto_complete_hold', false)
+            ->where('delivered_at', '<=', now()->subDays((int) config('miseku.auto_complete_days')))
+            ->chunkById(100, function ($orders) use (&$log) {
+                foreach ($orders as $order) if ($this->orders->autoCompleteDelivered($order)) $log['auto_completed']++;
             });
 
         return $log;

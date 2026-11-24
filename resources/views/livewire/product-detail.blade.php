@@ -67,6 +67,8 @@
                 <a href="{{ route('catalog', ['tipe' => $product->merchandise_type_id]) }}" wire:navigate class="ms-pill">{{ $product->merchandiseType->type_name }}</a>
             </div>
 
+            @if ($product->design_option_id)<p class="mt-3"><span class="ms-chip ms-chip-po">Produk dari voting desain</span></p>@endif
+
             <h1 class="mt-3 text-2xl leading-tight font-extrabold tracking-tight text-ink-900 sm:text-3xl">{{ $product->product_name }}</h1>
 
             <div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
@@ -131,7 +133,7 @@
                                     <dd class="font-bold text-ink-900">
                                         @if ($batch->min_order) min. {{ $batch->min_order }} pcs @endif
                                         @if ($batch->min_order && $batch->max_slot) · @endif
-                                        @if ($batch->max_slot) maks. {{ $batch->max_slot }} slot @endif
+                                        @if ($batch->max_slot) maks. {{ $batch->max_slot }} pcs @endif
                                     </dd>
                                 </div>
                             </div>

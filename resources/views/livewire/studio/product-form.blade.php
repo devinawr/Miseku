@@ -234,9 +234,10 @@
                             @error('min_order') <p class="ms-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="max_slot" class="ms-label">Kuota slot <span class="font-normal text-ink-400">(opsional)</span></label>
+                            <label for="max_slot" class="ms-label">Kuota pcs <span class="font-normal text-ink-400">(opsional)</span></label>
                             <input id="max_slot" type="number" min="1" wire:model.blur="max_slot" class="ms-input" placeholder="cth. 100">
                             @error('max_slot') <p class="ms-error">{{ $message }}</p> @enderror
+                            <p class="ms-hint">Jumlah maksimal barang (pcs), bukan jumlah sesi produksi.</p>
                         </div>
                     </div>
                 @endif

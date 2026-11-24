@@ -41,7 +41,7 @@ class Index extends Component
 
         $orders = CustomerOrder::query()
             ->where('buyer_id', Auth::id())
-            ->with(['artistProfile', 'items.product.primaryImage', 'customRequest', 'payments'])
+            ->with(['artistProfile', 'items.product.primaryImage', 'customRequest', 'payments', 'returns'])
             ->when($statuses, fn ($q) => $q->whereIn('order_status', $statuses))
             ->latest('created_at')->latest('id')
             ->paginate(10);

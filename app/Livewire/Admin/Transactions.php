@@ -6,6 +6,9 @@ use App\Livewire\Concerns\RunsActions;
 use App\Models\CustomerOrder;
 use App\Models\Payment;
 use App\Services\RefundService;
+use App\Services\OrderService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -40,6 +43,22 @@ class Transactions extends Component
     public function updatedQ(): void
     {
         $this->resetPage();
+    }
+
+    public function markDelivered(int $id): void
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        $this->attempt(fn () => app(OrderService::class)->markDelivered(CustomerOrder::findOrFail($id)), 'Kedatangan tercatat.');
+    }
+
+    public function toggleAutoHold(int $id): void
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        DB::transaction(function () use ($id) {
+            $order = CustomerOrder::whereKey($id)->lockForUpdate()->firstOrFail();
+            abort_unless($order->order_status === 'shipped', 422);
+            $order->update(['auto_complete_hold' => ! $order->auto_complete_hold]);
+        });
     }
 
     public function completeRefund(int $id): void

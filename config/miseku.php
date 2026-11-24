@@ -26,6 +26,9 @@ return [
     // Tagihan Midtrans yang tidak dibayar lewat batas ini → kedaluwarsa (jam)
     'payment_expiry_hours' => 24,
 
+    // Auto selesai dihitung dari kedatangan yang diverifikasi, bukan dari tanggal kirim.
+    'auto_complete_days' => 2,
+
     // BPMN 5 — masa retur sejak pesanan selesai/diterima (hari)
     'return_days' => 3,
 

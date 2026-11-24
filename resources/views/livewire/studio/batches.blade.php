@@ -18,7 +18,7 @@
                 <div class="mt-3">
                     <div class="flex justify-between text-xs font-bold text-ink-600">
                         <span>Terbayar {{ $b->paid_qty }} pcs @if ($b->all_qty > $b->paid_qty)(+{{ $b->all_qty - $b->paid_qty }} belum bayar)@endif</span>
-                        <span>Min {{ $b->min_order ?: '-' }} · Maks {{ $b->max_slot ?: '∞' }}</span>
+                        <span>Min {{ $b->min_order ?: '-' }} · Maks {{ $b->max_slot ?: '∞' }} pcs</span>
                     </div>
                     <div class="mt-1 h-2 overflow-hidden rounded-full bg-ink-100"><div class="h-full {{ $pct >= 100 ? 'bg-emerald-500' : 'ms-gradient' }}" style="width: {{ $pct }}%"></div></div>
                 </div>

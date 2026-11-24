@@ -25,7 +25,7 @@ class CustomerOrder extends Model
         'order_code', 'buyer_id', 'artist_profile_id', 'address_id', 'event_booth_id', 'custom_request_id',
         'order_type', 'shipping_method', 'payment_scheme', 'product_subtotal', 'shipping_cost', 'admin_fee',
         'total_amount', 'order_status', 'courier', 'tracking_number', 'settlement_deadline',
-        'settlement_reminder_stage', 'shipping_deadline', 'shipping_reminder_stage', 'completed_at', 'created_at',
+        'settlement_reminder_stage', 'shipping_deadline', 'shipping_reminder_stage', 'delivered_at', 'auto_complete_hold', 'completed_at', 'created_at',
     ];
 
     protected function casts(): array
@@ -39,6 +39,8 @@ class CustomerOrder extends Model
             'shipping_deadline'         => 'datetime',
             'settlement_reminder_stage' => 'integer',
             'shipping_reminder_stage'   => 'integer',
+            'delivered_at'              => 'datetime',
+            'auto_complete_hold'        => 'boolean',
             'completed_at'              => 'datetime',
             'created_at'                => 'datetime',
             'updated_at'                => 'datetime',

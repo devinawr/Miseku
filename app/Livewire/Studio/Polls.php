@@ -5,6 +5,7 @@ namespace App\Livewire\Studio;
 use App\Livewire\Concerns\RunsActions;
 use App\Models\DesignOption;
 use App\Models\DesignPoll;
+use App\Models\Fandom;
 use App\Services\PollService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,8 @@ class Polls extends Component
     public string $poll_title = '';
 
     public string $description = '';
+
+    public string $fandom_id = '';
 
     public string $start_date = '';
 
@@ -62,6 +65,7 @@ class Polls extends Component
         $this->validate([
             'poll_title'            => 'required|string|max:150',
             'description'           => 'nullable|string|max:2000',
+            'fandom_id'             => ['required', \Illuminate\Validation\Rule::exists('fandom', 'id')->where('status', 'active')],
             'start_date'            => 'required|date',
             'end_date'              => 'required|date|after:start_date|after:now',
             'options'               => 'array|min:2|max:6',
@@ -72,7 +76,7 @@ class Polls extends Component
 
         DB::transaction(function () {
             $poll = DesignPoll::create([
-                'artist_profile_id' => Auth::user()->artistProfile->id, 'poll_title' => $this->poll_title, 'description' => $this->description ?: null,
+                'artist_profile_id' => Auth::user()->artistProfile->id, 'fandom_id' => $this->fandom_id, 'poll_title' => $this->poll_title, 'description' => $this->description ?: null,
                 'start_date' => $this->start_date, 'end_date' => $this->end_date, 'poll_status' => 'running',
             ]);
             foreach ($this->options as $i => $op) {
@@ -80,7 +84,7 @@ class Polls extends Component
             }
         });
 
-        $this->reset('creating', 'poll_title', 'description', 'images');
+        $this->reset('creating', 'poll_title', 'description', 'images', 'fandom_id');
         $this->options = [['description' => ''], ['description' => '']];
         $this->dispatch('toast', message: 'Voting dibuat dan langsung tampil di halaman Voting.');
     }
@@ -109,6 +113,6 @@ class Polls extends Component
         $polls = DesignPoll::where('artist_profile_id', Auth::user()->artistProfile->id)
             ->with(['options' => fn ($q) => $q->withCount('votes')->with('product')])->withCount('votes')->latest('id')->get();
 
-        return view('livewire.studio.polls', compact('polls'));
+        return view('livewire.studio.polls', ['polls' => $polls, 'fandoms' => Fandom::active()->orderBy('fandom_name')->get()]);
     }
 }

@@ -351,7 +351,7 @@ class ProductForm extends Component
             'fandom_id' => 'fandom', 'fandom_character_id' => 'karakter', 'merchandise_type_id' => 'jenis merchandise',
             'stock' => 'stok', 'payment_scheme' => 'skema pembayaran', 'dp_amount' => 'nominal DP',
             'closes_at' => 'tanggal PO ditutup', 'estimated_month' => 'estimasi barang jadi',
-            'min_order' => 'minimum produksi', 'max_slot' => 'kuota slot', 'photos.*' => 'foto',
+            'min_order' => 'minimum produksi', 'max_slot' => 'kuota pcs', 'photos.*' => 'foto',
         ];
     }
 
@@ -359,7 +359,7 @@ class ProductForm extends Component
     {
         return [
             'dp_amount.lt' => 'Nominal DP harus lebih kecil dari harga.',
-            'max_slot.gte' => 'Kuota slot tidak boleh lebih kecil dari minimum produksi.',
+            'max_slot.gte' => 'Kuota pcs tidak boleh lebih kecil dari minimum produksi.',
         ];
     }
 

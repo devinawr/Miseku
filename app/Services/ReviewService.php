@@ -19,14 +19,21 @@ class ReviewService
 
     public function buyerCanReview(CustomerOrder $order, User $user): bool
     {
-        return $order->buyer_id === $user->id && $order->order_status === 'completed' && $order->order_type !== 'ots_event'
+        return ! $this->hasReturnOrRefund($order) && $order->buyer_id === $user->id && $order->order_status === 'completed' && $order->order_type !== 'ots_event'
             && $order->completed_at && now()->lte($order->completed_at->copy()->addDays(config('miseku.review_days_buyer')));
     }
 
     public function artistCanReview(CustomerOrder $order, User $user): bool
     {
-        return $order->artistProfile->user_id === $user->id && $order->order_status === 'completed' && $order->order_type !== 'ots_event'
+        return ! $this->hasReturnOrRefund($order) && $order->artistProfile->user_id === $user->id && $order->order_status === 'completed' && $order->order_type !== 'ots_event'
             && $order->completed_at && now()->lte($order->completed_at->copy()->addDays(config('miseku.review_days_artist')));
+    }
+
+    /** Jangan membuat ulasan baru selama retur berjalan atau refund dilakukan. */
+    private function hasReturnOrRefund(CustomerOrder $order): bool
+    {
+        return $order->returns()->whereIn('return_status', ['submitted', 'processing', 'approved', 'completed'])->exists()
+            || $order->payments()->where('payment_type', 'refund')->whereIn('payment_status', ['pending', 'success'])->exists();
     }
 
     /**

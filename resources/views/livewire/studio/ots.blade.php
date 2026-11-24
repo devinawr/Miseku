@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <x-studio-nav />
-    <x-page-title title="Penjualan OTS di booth" subtitle="Catat penjualan langsung saat event. Stok ready stock berkurang; uang tunai/QRIS pribadi tidak masuk saldo Miseku." />
+    <x-page-title title="Penjualan OTS di booth" subtitle="Catat penjualan langsung saat event. Stok ready stock berkurang; uang tunai/QRIS pribadi tidak masuk saldo Miseku. Metode bayar hanya catatan manual, bukan pembayaran yang diverifikasi sistem." />
 
     @if ($booths->isEmpty())
         <x-empty-state icon="ticket" title="Tidak ada event yang sedang berlangsung" description="Penjualan OTS hanya bisa saat event berlangsung dan kamu terdaftar punya booth.">

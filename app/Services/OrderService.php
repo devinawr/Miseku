@@ -448,6 +448,33 @@ class OrderService
         $this->complete($order, 'Pesanan diterima pembeli');
     }
 
+    /** Admin hanya mencatat jika status tiba sudah diverifikasi secara independen. */
+    public function markDelivered(CustomerOrder $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            Fail::unless($order->order_status === 'shipped' && $order->shipping_method === 'courier', 'Hanya pesanan kurir yang sudah dikirim.');
+            Fail::unless(! $order->delivered_at, 'Kedatangan sudah dicatat.');
+            $order->update(['delivered_at' => now()]);
+            $this->notify->send($order->buyer_id, 'order', 'Kedatangan paket dicatat', "Paket {$order->order_code} tercatat tiba. Jika ada kendala, segera hubungi CS. Pesanan dapat selesai otomatis setelah " . config('miseku.auto_complete_days') . ' hari.', $order);
+        });
+    }
+
+    /** Kunci baris dan periksa ulang seluruh syarat sebelum melepaskan dana. */
+    public function autoCompleteDelivered(CustomerOrder $order): bool
+    {
+        return DB::transaction(function () use ($order) {
+            $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->order_status !== 'shipped' || $order->shipping_method !== 'courier' || ! $order->delivered_at || $order->auto_complete_hold
+                || $order->delivered_at->copy()->addDays((int) config('miseku.auto_complete_days'))->isFuture()
+                || $order->cancellations()->whereIn('cancellation_status', ['submitted', 'in_discussion'])->exists()
+                || $order->returns()->whereIn('return_status', ['submitted', 'processing', 'approved'])->exists()
+                || $order->payments()->where('payment_type', 'refund')->whereIn('payment_status', ['pending', 'success'])->exists()) return false;
+            $this->complete($order, 'Pesanan selesai otomatis setelah kedatangan diverifikasi');
+            return true;
+        });
+    }
+
     /** Pesanan selesai → lepas dana ke artis (dipotong admin fee) + ajak beri ulasan. */
     public function complete(CustomerOrder $order, string $reason): void
     {

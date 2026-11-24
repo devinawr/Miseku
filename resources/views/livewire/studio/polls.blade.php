@@ -8,6 +8,7 @@
         <form wire:submit="save" class="ms-card mb-6 space-y-4 p-6">
             <div class="grid gap-4 md:grid-cols-2">
                 <label class="block md:col-span-2"><span class="ms-label">Judul voting</span><input type="text" wire:model="poll_title" class="ms-input">@error('poll_title')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                <label class="block md:col-span-2"><span class="ms-label">Fandom</span><select wire:model="fandom_id" class="ms-select"><option value="">Pilih fandom</option>@foreach ($fandoms as $fandom)<option value="{{ $fandom->id }}">{{ $fandom->fandom_name }}</option>@endforeach</select>@error('fandom_id')<p class="ms-error">{{ $message }}</p>@enderror<p class="ms-hint">Fans fandom ini dan pemilih sebelumnya akan diberi notifikasi saat voting dibuka.</p></label>
                 <label class="block md:col-span-2"><span class="ms-label">Deskripsi</span><textarea wire:model="description" rows="2" class="ms-input"></textarea></label>
                 <label class="block"><span class="ms-label">Mulai</span><input type="datetime-local" wire:model="start_date" class="ms-input"></label>
                 <label class="block"><span class="ms-label">Berakhir</span><input type="datetime-local" wire:model="end_date" class="ms-input">@error('end_date')<p class="ms-error">{{ $message }}</p>@enderror</label>

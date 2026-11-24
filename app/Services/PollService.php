@@ -29,6 +29,25 @@ class PollService
         }
     }
 
+    /** Satu kali saat voting benar-benar mulai, termasuk voting terjadwal. */
+    public function announceOpening(DesignPoll $poll): bool
+    {
+        return DB::transaction(function () use ($poll) {
+            $poll = DesignPoll::whereKey($poll->id)->lockForUpdate()->with('artistProfile')->firstOrFail();
+            if (! $poll->is_open || $poll->open_notified_at || ! $poll->fandom_id) return false;
+            $fandom = $poll->fandom_id;
+            $favorite = DB::table('favorite_fandom')->where('fandom_id', $fandom)->pluck('user_id');
+            $members = DB::table('fandom_member')->where('fandom_id', $fandom)->pluck('user_id');
+            $pastVoters = DesignVote::whereIn('design_poll_id', DesignPoll::where('fandom_id', $fandom)->where('id', '!=', $poll->id)->select('id'))->pluck('user_id');
+            $ids = $favorite->merge($members)->merge($pastVoters)->unique()->filter(fn ($id) => (int) $id !== (int) $poll->artistProfile->user_id);
+            User::whereIn('id', $ids)->where('is_active', true)->orderBy('id')->chunkById(200, function ($users) use ($poll) {
+                foreach ($users as $user) $this->notify->send($user, 'design_poll', 'Voting desain dibuka', "Voting \"{$poll->poll_title}\" dari {$poll->artistProfile->shop_name} sudah dibuka. Pilih desain favoritmu!", null, false);
+            });
+            $poll->update(['open_notified_at' => now()]);
+            return true;
+        });
+    }
+
     /** Voting berakhir → tentukan pemenang (baca design_vote) + notifikasi. */
     public function finish(DesignPoll $poll): ?DesignOption
     {
