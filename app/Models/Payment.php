@@ -13,12 +13,12 @@ class Payment extends Model
 
     protected $fillable = [
         'customer_order_id', 'payment_type', 'amount', 'payment_method', 'midtrans_order_id',
-        'midtrans_transaction_id', 'snap_token', 'snap_token_expires_at', 'refund_method', 'refund_proof', 'payment_status', 'paid_at',
+        'midtrans_transaction_id', 'midtrans_settled_at', 'snap_token', 'snap_token_expires_at', 'refund_method', 'refund_proof', 'payment_status', 'paid_at',
     ];
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'snap_token' => 'encrypted', 'snap_token_expires_at' => 'datetime'];
+        return ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'midtrans_settled_at' => 'datetime', 'snap_token' => 'encrypted', 'snap_token_expires_at' => 'datetime'];
     }
 
     public const TYPE_LABELS = ['dp' => 'DP', 'settlement' => 'Pelunasan', 'full' => 'Bayar penuh', 'refund' => 'Refund'];

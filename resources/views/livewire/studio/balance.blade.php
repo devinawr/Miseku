@@ -2,15 +2,33 @@
     <x-studio-nav />
     <x-page-title title="Saldo & penarikan" subtitle="Dana pembeli ditahan sampai pesanan selesai, lalu dilepas ke saldo tersedia setelah dipotong admin fee." />
 
-    <div class="grid gap-4 md:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="ms-card p-5">
-            <p class="text-sm text-ink-500">Saldo tersedia</p>
-            <p class="mt-1 text-3xl font-extrabold text-emerald-700"><x-rupiah :value="$profile->available_balance" /></p>
+            <p class="text-sm text-ink-500">Bisa diajukan</p>
+            <p class="mt-1 text-2xl font-extrabold text-emerald-700"><x-rupiah :value="$eligibility['eligible']" /></p>
+            <p class="mt-1 text-xs text-ink-500">Saldo yang memenuhi syarat penarikan.</p>
         </div>
         <div class="ms-card p-5">
-            <p class="text-sm text-ink-500">Saldo tertahan (pesanan berjalan)</p>
-            <p class="mt-1 text-3xl font-extrabold text-ink-900"><x-rupiah :value="$profile->held_balance" /></p>
+            <p class="text-sm text-ink-500">Tertahan karena pesanan</p>
+            <p class="mt-1 text-2xl font-extrabold text-ink-900"><x-rupiah :value="$profile->held_balance" /></p>
+            <p class="mt-1 text-xs text-ink-500">Dana ditahan untuk pesanan berjalan.</p>
         </div>
+        <div class="ms-card p-5">
+            <p class="text-sm text-ink-500">Menunggu 3 hari kerja</p>
+            <p class="mt-1 text-2xl font-extrabold text-amber-700"><x-rupiah :value="$eligibility['waiting_settlement']" /></p>
+            <p class="mt-1 text-xs text-ink-500">Minimal yang masih menunggu sejak settlement terverifikasi.</p>
+        </div>
+        <div class="ms-card p-5">
+            <p class="text-sm text-ink-500">Belum terverifikasi / lainnya</p>
+            <p class="mt-1 text-2xl font-extrabold text-ink-900"><x-rupiah :value="$eligibility['waiting_other']" /></p>
+            <p class="mt-1 text-xs text-ink-500">Perlu pemeriksaan kalender, settlement, atau jurnal.</p>
+        </div>
+    </div>
+    <p class="mt-3 text-xs text-ink-500">Saldo tersedia tercatat: <x-rupiah :value="$profile->available_balance" />. Rincian penarikan menggunakan saldo tersedia nonnegatif. Pengajuan yang sedang diproses: <x-rupiah :value="$eligibility['pending_withdrawal']" /> (sudah dipotong dari saldo tersedia). Angka berasal dari catatan Miseku, bukan saldo Midtrans.</p>
+    @if ((float) $profile->available_balance < 0)
+        <p class="mt-2 text-xs text-red-700">Saldo tersedia negatif. Hubungi admin untuk rekonsiliasi refund dan jurnal.</p>
+    @endif
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
         <form wire:submit="withdraw" class="ms-card space-y-2 p-5">
             <p class="text-sm font-bold text-ink-900">Tarik dana ke {{ $profile->bank_name ?: '—' }} {{ $profile->bank_account_number }}</p>
             @if (! $profile->bank_name || ! $profile->bank_account_number)
@@ -21,7 +39,14 @@
                 <button type="submit" class="ms-btn-primary">Tarik</button>
             </div>
             @error('amount')<p class="ms-error">{{ $message }}</p>@enderror
-            <p class="ms-hint">Minimal <x-rupiah :value="config('miseku.withdrawal_minimum')" />. Diproses manual oleh admin.</p>
+            <p class="ms-hint">Bisa diajukan: <b><x-rupiah :value="$eligibility['eligible']" /></b>. Minimal <x-rupiah :value="config('miseku.withdrawal_minimum')" />. Admin tetap mentransfer manual setelah memeriksa dana.</p>
+            @if ($eligibility['waiting'] > 0)
+                <p class="rounded-xl bg-amber-50 p-2 text-sm text-amber-800">Sebagian saldo belum bisa diajukan: <x-rupiah :value="$eligibility['waiting']" />. Penyebabnya dapat berupa masa tunggu 3 hari kerja atau data yang perlu diperiksa.
+                    @if ($eligibility['next_at']) Perkiraan waktu salah satu pembayaran memenuhi masa tunggu: {{ $eligibility['next_at']->translatedFormat('d M Y H:i') }} WIB. @endif
+                    @if ($eligibility['calendar_missing']) Kalender hari kerja/libur belum lengkap; admin perlu memperbarui kalender. @endif
+                    @if ($eligibility['missing']) Sebagian data settlement atau jurnal belum terverifikasi; hubungi admin. @endif
+                </p>
+            @endif
         </form>
     </div>
 

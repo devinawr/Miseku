@@ -29,6 +29,8 @@ class WithdrawalService
             Fail::unless(filled($artist->bank_name) && filled($artist->bank_account_number), 'Lengkapi nama bank & nomor rekening dulu.');
             Fail::unless($amount >= $min, 'Minimal penarikan ' . Money::rp($min) . '.');
             Fail::unless($amount <= (float) $artist->available_balance, 'Jumlah melebihi saldo tersedia (' . Money::rp($artist->available_balance) . ').');
+            $eligible = app(WithdrawalEligibilityService::class)->summary($artist);
+            Fail::unless($amount <= $eligible['eligible'], 'Jumlah melebihi saldo yang memenuhi masa settlement 3 hari kerja (' . Money::rp($eligible['eligible']) . '). Periksa tanggal berikutnya atau hubungi admin.');
             Fail::unless(! Withdrawal::where('artist_profile_id', $artist->id)->whereIn('withdrawal_status', ['submitted', 'processing'])->exists(),
                 'Masih ada penarikan yang sedang diproses. Tunggu sampai selesai.');
 

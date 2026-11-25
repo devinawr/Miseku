@@ -38,6 +38,11 @@ return [
 
     // BPMN 6 — minimum penarikan dana (rupiah)
     'withdrawal_minimum' => 50000,
+    // Daftar hari libur perlu dipelihara operator setiap tahun.
+    'withdrawal_settlement_business_days' => 3,
+    'settlement_holidays' => array_values(array_filter(array_map('trim', explode(',', env('MISEKU_SETTLEMENT_HOLIDAYS', ''))))),
+    'settlement_calendar_from' => env('MISEKU_SETTLEMENT_CALENDAR_FROM'),
+    'settlement_calendar_through' => env('MISEKU_SETTLEMENT_CALENDAR_THROUGH'),
 
     // Berat default per item (gram) untuk hitung ongkir — tabel product tidak punya kolom berat
     'default_item_weight' => 200,

@@ -42,12 +42,16 @@ class PaymentService
     }
 
     /** Webhook / simulasi → pembayaran berhasil. Idempoten. */
-    public function markSuccess(Payment $payment, ?string $method, ?string $transactionId = null, ?Carbon $paidAt = null): Payment
+    public function markSuccess(Payment $payment, ?string $method, ?string $transactionId = null, ?Carbon $paidAt = null, ?Carbon $settledAt = null): Payment
     {
-        return DB::transaction(function () use ($payment, $method, $transactionId, $paidAt) {
+        return DB::transaction(function () use ($payment, $method, $transactionId, $paidAt, $settledAt) {
             $payment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
-            if ($payment->payment_status === 'success' || $payment->payment_type === 'refund') {
+            if ($payment->payment_type === 'refund') return $payment;
+            // SIM hanya untuk mode simulasi, bukan bukti settlement provider.
+            if (! $settledAt && str_starts_with((string) $transactionId, 'SIM-') && ! $this->midtrans->isLive()) $settledAt = now();
+            if (in_array($payment->payment_status, ['success', 'refunded'], true)) {
+                if ($settledAt && ! $payment->midtrans_settled_at) $payment->update(['midtrans_settled_at' => $settledAt]);
                 return $payment;
             }
 
@@ -59,6 +63,7 @@ class PaymentService
                 'payment_method'          => $method,
                 'midtrans_transaction_id' => $transactionId,
                 'paid_at'                 => $paidAt ?? now(),
+                'midtrans_settled_at'     => $settledAt,
             ]);
 
             $this->balance->hold($order, $payment, (float) $payment->amount);
@@ -108,8 +113,22 @@ class PaymentService
         [$status, $method] = $this->midtrans->interpret($payload);
 
         if ($status === 'success') {
-            return $this->markSuccess($payment, $method, $payload['transaction_id'] ?? null,
-                isset($payload['settlement_time']) ? Carbon::parse($payload['settlement_time']) : null);
+            // Jangan memproses pembayaran bila verifikasi API gagal atau data berbeda.
+            try {
+                if (! $this->midtrans->isLive()) return $payment->fresh();
+                $verified = $this->midtrans->status($payment->midtrans_order_id);
+                if (! is_array($verified) || ($verified['order_id'] ?? '') !== $payment->midtrans_order_id
+                    || ! isset($verified['gross_amount']) || ! is_numeric($verified['gross_amount'])
+                    || abs((float) $verified['gross_amount'] - (float) $payment->amount) >= 0.005) return $payment->fresh();
+                [$verifiedStatus, $verifiedMethod] = $this->midtrans->interpret($verified);
+                if ($verifiedStatus !== 'success') return $payment->fresh();
+                $settledAt = ($verified['transaction_status'] ?? '') === 'settlement'
+                    ? (! empty($verified['settlement_time']) ? Carbon::parse($verified['settlement_time'], 'Asia/Jakarta')->utc() : now()) : null;
+                return $this->markSuccess($payment, $verifiedMethod, $verified['transaction_id'] ?? null, $settledAt, $settledAt);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Verifikasi status Midtrans gagal', ['payment_id' => $payment->id]);
+                return $payment->fresh();
+            }
         }
 
         if (in_array($status, ['failed', 'expired'], true)) {

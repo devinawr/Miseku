@@ -44,6 +44,7 @@ class Balance extends Component
 
         return view('livewire.studio.balance', [
             'profile'     => $profile,
+            'eligibility' => app(\App\Services\WithdrawalEligibilityService::class)->summary($profile),
             'mutations'   => BalanceTransaction::with('order:id,order_code')->where('artist_profile_id', $profile->id)->latest('created_at')->latest('id')->paginate(15),
             'withdrawals' => Withdrawal::where('artist_profile_id', $profile->id)->latest('requested_at')->latest('id')->take(10)->get(),
             'detail'      => $this->detailId ? Withdrawal::with('processor')->where('artist_profile_id', $profile->id)->find($this->detailId) : null,

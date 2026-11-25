@@ -21,9 +21,10 @@
             @endforeach
         </div>
     @endif
+    <p class="mb-3 text-xs text-ink-500">Saldo dihitung dari catatan Miseku, bukan saldo Midtrans. Pengajuan diproses sudah dikurangi dari saldo bisa diajukan. Admin tetap wajib mengecek saldo Midtrans sebelum transfer.</p>
     <div class="ms-card overflow-x-auto">
-        <table class="w-full min-w-[760px] text-sm">
-            <thead class="bg-ink-50 text-left text-xs font-bold text-ink-500 uppercase"><tr><th class="px-4 py-3">Nama</th><th class="px-4 py-3">Peran</th><th class="px-4 py-3">Rating</th><th class="px-4 py-3">Pesanan</th><th class="px-4 py-3">Status</th><th></th></tr></thead>
+        <table class="w-full min-w-[1100px] text-sm">
+            <thead class="bg-ink-50 text-left text-xs font-bold text-ink-500 uppercase"><tr><th class="px-4 py-3">Nama</th><th class="px-4 py-3">Peran</th><th class="px-4 py-3">Rating</th><th class="px-4 py-3">Saldo artis</th><th class="px-4 py-3">Pesanan</th><th class="px-4 py-3">Status</th><th></th></tr></thead>
             <tbody class="divide-y divide-ink-100">
                 @foreach ($users as $u)
                     <tr wire:key="u-{{ $u->id }}">
@@ -32,6 +33,17 @@
                         <td class="px-4 py-3 text-xs">
                             Pembeli ★ {{ number_format((float) $u->rating_as_buyer, 2) }} ({{ $u->rating_count_as_buyer }})
                             @if ($u->artistProfile)<br>Toko ★ {{ number_format((float) $u->artistProfile->rating, 2) }} ({{ $u->artistProfile->rating_count }})@endif
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            @if ($u->artistProfile)
+                                @php $saldo = $eligibility[$u->artistProfile->id]; @endphp
+                                <p>Bisa diajukan: <b><x-rupiah :value="$saldo['eligible']" /></b></p>
+                                <p>Tertahan pesanan: <x-rupiah :value="$u->artistProfile->held_balance" /></p>
+                                <p>Menunggu 3 hari kerja (minimal): <x-rupiah :value="$saldo['waiting_settlement']" /></p>
+                                <p>Belum terverifikasi / lainnya: <x-rupiah :value="$saldo['waiting_other']" /></p>
+                                <p>Pengajuan diproses: <x-rupiah :value="$saldo['pending_withdrawal']" /></p>
+                                @if ($saldo['waiting_other'] > 0)<p class="text-amber-700">Periksa jurnal, settlement, dan kalender hari libur.</p>@endif
+                            @else — @endif
                         </td>
                         <td class="px-4 py-3">{{ $u->orders_count }}</td>
                         <td class="px-4 py-3"><span class="ms-chip {{ $u->is_active ? 'ms-chip-ready' : 'bg-red-50 text-red-600' }}">{{ $u->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>

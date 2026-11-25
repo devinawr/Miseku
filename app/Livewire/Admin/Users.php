@@ -86,6 +86,11 @@ class Users extends Component
             ->when($this->role, fn ($w) => $w->where('role', $this->role))
             ->withCount('orders')->orderBy('role')->orderBy('name')->paginate(20);
 
-        return view('livewire.admin.users', ['users' => $users, 'ratings' => app(RatingService::class), 'applications' => ArtistApplication::with('user')->where('status','pending')->latest('id')->get()]);
+        $eligibility = [];
+        foreach ($users as $user) {
+            if ($user->artistProfile) $eligibility[$user->artistProfile->id] = app(\App\Services\WithdrawalEligibilityService::class)->summary($user->artistProfile);
+        }
+
+        return view('livewire.admin.users', ['eligibility' => $eligibility, 'users' => $users, 'ratings' => app(RatingService::class), 'applications' => ArtistApplication::with('user')->where('status','pending')->latest('id')->get()]);
     }
 }
