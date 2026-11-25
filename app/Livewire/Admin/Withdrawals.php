@@ -4,6 +4,8 @@ namespace App\Livewire\Admin;
 
 use App\Livewire\Concerns\RunsActions;
 use App\Models\Withdrawal;
+use App\Models\ArtistProfile;
+use App\Services\WithdrawalEligibilityService;
 use App\Services\WithdrawalService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -48,8 +50,21 @@ class Withdrawals extends Component
 
     public function render()
     {
+        $service = app(WithdrawalEligibilityService::class);
+        // Hitung semua toko, tidak terbatas halaman daftar penarikan terbaru.
+        $shops = ArtistProfile::with('user')->orderBy('shop_name')->get()->map(function ($shop) use ($service) {
+            return ['profile' => $shop, 'eligibility' => $service->summary($shop)];
+        });
+        $sumCents = fn (callable $fn) => $shops->sum(fn ($row) => (int) round($fn($row) * 100)) / 100;
+        $totals = [
+            'available' => $sumCents(fn ($r) => (float) $r['profile']->available_balance),
+            'held' => $sumCents(fn ($r) => (float) $r['profile']->held_balance),
+            'eligible' => $sumCents(fn ($r) => $r['eligibility']['eligible']),
+            'pending' => $sumCents(fn ($r) => $r['eligibility']['pending_withdrawal']),
+        ];
         return view('livewire.admin.withdrawals', [
             'rows' => Withdrawal::with(['artistProfile', 'processor'])->orderByRaw("withdrawal_status IN ('submitted','processing') DESC")->latest('requested_at')->take(100)->get(),
+            'shops' => $shops, 'totals' => $totals, 'demoSimulation' => $service->isDemoSimulation(),
         ]);
     }
 }

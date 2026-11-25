@@ -265,6 +265,7 @@
                 @if (! $user->artistProfile)
                     <label class="block"><span class="ms-label">Tautan Instagram/X atau portofolio (wajib)</span><input type="url" wire:model="social_url" class="ms-input" placeholder="https://...">@error('social_url')<p class="ms-error">{{ $message }}</p>@enderror</label>
                 @endif
+                <label class="block"><span class="ms-label">Nomor HP <span class="text-red-600">(wajib)</span></span><input type="tel" wire:model="phone" class="ms-input" autocomplete="tel" placeholder="Contoh: 081234567890" required>@error('phone')<p class="ms-error">{{ $message }}</p>@enderror<span class="mt-1 block text-xs text-ink-500">Nomor ini sama dengan nomor HP di profil akunmu.</span></label>
                 <label class="block"><span class="ms-label">Nama toko</span><input type="text" wire:model="shop_name" class="ms-input">@error('shop_name')<p class="ms-error">{{ $message }}</p>@enderror</label>
                 <label class="block"><span class="ms-label">Deskripsi toko</span><textarea wire:model="shop_description" rows="3" class="ms-input"></textarea>@error('shop_description')<p class="ms-error">{{ $message }}</p>@enderror</label>
                 <div class="grid gap-4 sm:grid-cols-2">

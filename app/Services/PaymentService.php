@@ -48,8 +48,7 @@ class PaymentService
             $payment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
             if ($payment->payment_type === 'refund') return $payment;
-            // SIM hanya untuk mode simulasi, bukan bukti settlement provider.
-            if (! $settledAt && str_starts_with((string) $transactionId, 'SIM-') && ! $this->midtrans->isLive()) $settledAt = now();
+            // Transaksi simulasi bukan settlement Midtrans dan tidak boleh disimpan sebagai bukti provider.
             if (in_array($payment->payment_status, ['success', 'refunded'], true)) {
                 if ($settledAt && ! $payment->midtrans_settled_at) $payment->update(['midtrans_settled_at' => $settledAt]);
                 return $payment;

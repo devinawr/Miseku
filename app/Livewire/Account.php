@@ -582,6 +582,7 @@ class Account extends Component
         abort_if($user->isAdmin(), 403);
 
         $data = $this->validate([
+            'phone'               => ['required', 'string', 'max:20', 'regex:/^(?=(?:\D*\d){8,20}\D*$)\+?[0-9][0-9\s-]*$/'],
             'shop_name'           => ['required', 'string', 'min:3', 'max:100', Rule::unique('artist_profile', 'shop_name')->ignore($user->artistProfile?->id)],
             'shop_description'    => ['nullable', 'string', 'max:1000'],
             'social_url'          => [$user->artistProfile ? 'nullable' : 'required', 'url:http,https', 'max:500'],
@@ -591,9 +592,11 @@ class Account extends Component
             'shop_city_id'        => ['required', 'string', 'max:20'],
             'shop_postal_code'    => ['nullable', 'string', 'max:10'],
         ], [
+            'phone.required'            => 'Nomor HP wajib diisi untuk membuka atau menyimpan toko.',
+            'phone.regex'               => 'Masukkan nomor HP dengan 8–20 digit; boleh menggunakan + di awal, spasi, atau tanda hubung.',
             'bank_account_number.regex' => 'Nomor rekening hanya angka.',
             'shop_city_id.required'     => 'Pilih kota/kecamatan toko dari hasil pencarian.',
-        ], ['shop_name' => 'nama toko', 'bank_name' => 'nama bank', 'bank_account_number' => 'nomor rekening', 'shop_address' => 'alamat toko', 'shop_postal_code' => 'kode pos']);
+        ], ['phone' => 'nomor HP', 'shop_name' => 'nama toko', 'bank_name' => 'nama bank', 'bank_account_number' => 'nomor rekening', 'shop_address' => 'alamat toko', 'shop_postal_code' => 'kode pos']);
 
         $province = $this->shopProvinceName ?: (app(ShippingService::class)->provinceOf($data['shop_city_id']) ?? trim((string) strrchr($this->shop_city_label, ','), ', '));
         $addressValues = [
@@ -609,7 +612,8 @@ class Account extends Component
         ];
 
         if ($user->artistProfile) {
-            DB::transaction(function () use ($user, $values, $saveAddress) {
+            DB::transaction(function () use ($user, $values, $saveAddress, $data) {
+                $user->update(['phone' => trim($data['phone'])]);
                 $user->artistProfile->update($values);
                 $saveAddress();
             });
@@ -625,6 +629,7 @@ class Account extends Component
             if ($application?->status === 'pending') {
                 \App\Support\Fail::because('Pengajuan toko masih menunggu admin.');
             }
+            $user->update(['phone' => trim($data['phone'])]);
             $payload = $values + ['user_id'=>$user->id, 'social_url'=>$data['social_url'],
                 'shop_address'=>$data['shop_address'], 'shop_city_id'=>$data['shop_city_id'],
                 'shop_province'=>mb_substr($province ?: '-', 0, 80), 'shop_postal_code'=>$data['shop_postal_code'] ?: null,

@@ -38,11 +38,13 @@ return [
 
     // BPMN 6 — minimum penarikan dana (rupiah)
     'withdrawal_minimum' => 50000,
-    // Daftar hari libur perlu dipelihara operator setiap tahun.
+    // Kalender 2026 adalah default kebijakan Miseku, harus diperbarui tiap tahun.
     'withdrawal_settlement_business_days' => 3,
-    'settlement_holidays' => array_values(array_filter(array_map('trim', explode(',', env('MISEKU_SETTLEMENT_HOLIDAYS', ''))))),
-    'settlement_calendar_from' => env('MISEKU_SETTLEMENT_CALENDAR_FROM'),
-    'settlement_calendar_through' => env('MISEKU_SETTLEMENT_CALENDAR_THROUGH'),
+    // Simulasi HANYA database demo lokal tanpa kredensial Midtrans.
+    'demo_settlement' => env('MISEKU_DEMO_SETTLEMENT', false),
+    'settlement_holidays' => array_values(array_filter(array_map('trim', explode(',', env('MISEKU_SETTLEMENT_HOLIDAYS', '2026-01-01,2026-01-16,2026-02-16,2026-02-17,2026-03-18,2026-03-19,2026-03-20,2026-03-23,2026-03-24,2026-04-03,2026-05-01,2026-05-14,2026-05-15,2026-05-27,2026-05-28,2026-06-01,2026-06-16,2026-08-17,2026-08-25,2026-12-24,2026-12-25'))))),
+    'settlement_calendar_from' => env('MISEKU_SETTLEMENT_CALENDAR_FROM', '2026-01-01'),
+    'settlement_calendar_through' => env('MISEKU_SETTLEMENT_CALENDAR_THROUGH', '2026-12-31'),
 
     // Berat default per item (gram) untuk hitung ongkir — tabel product tidak punya kolom berat
     'default_item_weight' => 200,

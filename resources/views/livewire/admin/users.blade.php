@@ -21,6 +21,9 @@
             @endforeach
         </div>
     @endif
+    @if (app(\App\Services\WithdrawalEligibilityService::class)->isDemoSimulation())
+        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo dan pembayaran adalah simulasi, bukan dana Midtrans asli.</p>
+    @endif
     <p class="mb-3 text-xs text-ink-500">Saldo dihitung dari catatan Miseku, bukan saldo Midtrans. Pengajuan diproses sudah dikurangi dari saldo bisa diajukan. Admin tetap wajib mengecek saldo Midtrans sebelum transfer.</p>
     <div class="ms-card overflow-x-auto">
         <table class="w-full min-w-[1100px] text-sm">
@@ -39,10 +42,10 @@
                                 @php $saldo = $eligibility[$u->artistProfile->id]; @endphp
                                 <p>Bisa diajukan: <b><x-rupiah :value="$saldo['eligible']" /></b></p>
                                 <p>Tertahan pesanan: <x-rupiah :value="$u->artistProfile->held_balance" /></p>
-                                <p>Menunggu 3 hari kerja (minimal): <x-rupiah :value="$saldo['waiting_settlement']" /></p>
-                                <p>Belum terverifikasi / lainnya: <x-rupiah :value="$saldo['waiting_other']" /></p>
+                                <p>Menunggu 3 hari kerja: <x-rupiah :value="$saldo['waiting_settlement']" /></p>
+                                <p>Saldo tersedia: <x-rupiah :value="$u->artistProfile->available_balance" /></p>
                                 <p>Pengajuan diproses: <x-rupiah :value="$saldo['pending_withdrawal']" /></p>
-                                @if ($saldo['waiting_other'] > 0)<p class="text-amber-700">Periksa jurnal, settlement, dan kalender hari libur.</p>@endif
+                                @if ($saldo['waiting_other'] > 0)<p class="text-amber-700">Sebagian dana masih dalam proses: <x-rupiah :value="$saldo['waiting_other']" />.</p>@endif
                             @else — @endif
                         </td>
                         <td class="px-4 py-3">{{ $u->orders_count }}</td>

@@ -2,6 +2,9 @@
     <x-studio-nav />
     <x-page-title title="Saldo & penarikan" subtitle="Dana pembeli ditahan sampai pesanan selesai, lalu dilepas ke saldo tersedia setelah dipotong admin fee." />
 
+    @if (app(\App\Services\WithdrawalEligibilityService::class)->isDemoSimulation())
+        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo dan pembayaran adalah simulasi, bukan dana Midtrans asli.</p>
+    @endif
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="ms-card p-5">
             <p class="text-sm text-ink-500">Bisa diajukan</p>
@@ -16,12 +19,12 @@
         <div class="ms-card p-5">
             <p class="text-sm text-ink-500">Menunggu 3 hari kerja</p>
             <p class="mt-1 text-2xl font-extrabold text-amber-700"><x-rupiah :value="$eligibility['waiting_settlement']" /></p>
-            <p class="mt-1 text-xs text-ink-500">Minimal yang masih menunggu sejak settlement terverifikasi.</p>
+            <p class="mt-1 text-xs text-ink-500">Dana menunggu setelah pembayaran selesai.</p>
         </div>
         <div class="ms-card p-5">
-            <p class="text-sm text-ink-500">Belum terverifikasi / lainnya</p>
-            <p class="mt-1 text-2xl font-extrabold text-ink-900"><x-rupiah :value="$eligibility['waiting_other']" /></p>
-            <p class="mt-1 text-xs text-ink-500">Perlu pemeriksaan kalender, settlement, atau jurnal.</p>
+            <p class="text-sm text-ink-500">Saldo tersedia tercatat</p>
+            <p class="mt-1 text-2xl font-extrabold text-ink-900"><x-rupiah :value="$profile->available_balance" /></p>
+            <p class="mt-1 text-xs text-ink-500">Mencakup dana yang siap dan masih diproses.</p>
         </div>
     </div>
     <p class="mt-3 text-xs text-ink-500">Saldo tersedia tercatat: <x-rupiah :value="$profile->available_balance" />. Rincian penarikan menggunakan saldo tersedia nonnegatif. Pengajuan yang sedang diproses: <x-rupiah :value="$eligibility['pending_withdrawal']" /> (sudah dipotong dari saldo tersedia). Angka berasal dari catatan Miseku, bukan saldo Midtrans.</p>
@@ -41,10 +44,10 @@
             @error('amount')<p class="ms-error">{{ $message }}</p>@enderror
             <p class="ms-hint">Bisa diajukan: <b><x-rupiah :value="$eligibility['eligible']" /></b>. Minimal <x-rupiah :value="config('miseku.withdrawal_minimum')" />. Admin tetap mentransfer manual setelah memeriksa dana.</p>
             @if ($eligibility['waiting'] > 0)
-                <p class="rounded-xl bg-amber-50 p-2 text-sm text-amber-800">Sebagian saldo belum bisa diajukan: <x-rupiah :value="$eligibility['waiting']" />. Penyebabnya dapat berupa masa tunggu 3 hari kerja atau data yang perlu diperiksa.
-                    @if ($eligibility['next_at']) Perkiraan waktu salah satu pembayaran memenuhi masa tunggu: {{ $eligibility['next_at']->translatedFormat('d M Y H:i') }} WIB. @endif
-                    @if ($eligibility['calendar_missing']) Kalender hari kerja/libur belum lengkap; admin perlu memperbarui kalender. @endif
-                    @if ($eligibility['missing']) Sebagian data settlement atau jurnal belum terverifikasi; hubungi admin. @endif
+                <p class="rounded-xl bg-amber-50 p-2 text-sm text-amber-800">Saldo yang belum bisa diajukan: <x-rupiah :value="$eligibility['waiting']" />.
+                    @if ($eligibility['waiting_settlement'] > 0) Sebagian dana menunggu 3 hari kerja. @endif
+                    @if ($eligibility['next_at']) Perkiraan dana berikutnya siap: {{ $eligibility['next_at']->translatedFormat('d M Y H:i') }} WIB. @endif
+                    @if ($eligibility['waiting_other'] > 0) Sebagian dana masih dalam proses. Hubungi admin untuk informasi. @endif
                 </p>
             @endif
         </form>
