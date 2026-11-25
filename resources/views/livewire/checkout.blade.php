@@ -59,9 +59,10 @@
                             @foreach ($pkg['rows'] as $row)
                                 @php $p = $row['product']; $batch = $row['batch']; @endphp
                                 <div class="mt-3 flex gap-3" wire:key="row-{{ $row['index'] }}">
-                                    <img src="{{ $p->cover_url }}" class="h-16 w-16 shrink-0 rounded-xl object-cover" alt="">
+                                    <img src="{{ $row['variant']?->image_url ?? $p->cover_url }}" class="h-16 w-16 shrink-0 rounded-xl object-cover" alt="">
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate font-bold text-ink-900">{{ $p->product_name }}</p>
+                                        @if ($row['variant']) <p class="text-xs font-bold text-brand-700">Varian: {{ $row['variant']->name }}</p> @endif
                                         <p class="text-sm text-ink-500">{{ $row['qty'] }} × <x-rupiah :value="$row['price']" /></p>
                                         @if ($batch)
                                             <p class="text-xs text-ink-500">PO tutup {{ $batch->closes_at?->translatedFormat('d M Y') }} · estimasi {{ $batch->estimated_month?->translatedFormat('F Y') }}</p>

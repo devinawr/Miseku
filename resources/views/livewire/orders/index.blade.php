@@ -32,7 +32,7 @@
             @endphp
             <article wire:key="o-{{ $order->id }}" class="ms-card overflow-hidden">
             <a href="{{ route('orders.show', $order) }}" wire:navigate class="flex gap-4 p-4 transition hover:bg-brand-50/40">
-                <img src="{{ $first?->product?->cover_url ?? '/img/logo-mark.png' }}" class="h-20 w-20 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
+                <img src="{{ $first?->variant_image_url ?? $first?->product?->cover_url ?? '/img/logo-mark.png' }}" class="h-20 w-20 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="font-mono text-xs text-ink-500">{{ $order->order_code }}</span>
@@ -45,6 +45,7 @@
                         @else {{ $first?->product?->product_name }} @if ($order->items->count() > 1)<span class="font-normal text-ink-500">+{{ $order->items->count() - 1 }} produk</span>@endif
                         @endif
                     </p>
+                    @if ($first?->variant_name) <p class="text-xs text-brand-700">Varian: {{ $first->variant_name }}</p> @endif
                     <p class="text-sm text-ink-500">{{ $order->artistProfile->shop_name }} · {{ $order->created_at->translatedFormat('d M Y') }}</p>
                     <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
                         <span class="font-extrabold text-ink-900"><x-rupiah :value="$order->total_amount" /></span>

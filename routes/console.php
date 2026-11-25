@@ -26,3 +26,16 @@ Artisan::command('miseku:check-settlement {paymentId}', function (string $paymen
         $this->info('Settlement terverifikasi untuk payment #' . $p->id . '.'); return 0;
     } catch (\Throwable $e) { $this->error('Pemeriksaan gagal; coba lagi setelah koneksi tersedia.'); return 1; }
 })->purpose('Verifikasi status settlement pembayaran lama ke Midtrans');
+
+// Bersifat opt-in: biaya/rate limit tergantung paket penyedia. Scheduler wajib berjalan.
+Artisan::command('miseku:track-deliveries', function () {
+    if (! config('services.rajaongkir.tracking_enabled')) { $this->info('Tracking otomatis belum diaktifkan.'); return 0; }
+    $checked = 0; $delivered = 0;
+    \App\Models\CustomerOrder::where('order_status', 'shipped')->where('shipping_method', 'courier')
+        ->whereNull('delivered_at')->whereNotNull('tracking_number')->orderBy('id')
+        ->chunkById(100, function ($orders) use (&$checked, &$delivered) {
+            foreach ($orders as $order) { $checked++; if (app(\App\Services\CourierTrackingService::class)->check($order)) $delivered++; }
+        });
+    $this->info("Diperiksa: {$checked}; tiba terverifikasi: {$delivered}."); return 0;
+})->purpose('Periksa status kiriman melalui RajaOngkir');
+Schedule::command('miseku:track-deliveries')->everySixHours()->withoutOverlapping();

@@ -76,7 +76,7 @@ class Checkout extends Component
     #[Computed]
     public function products()
     {
-        return Product::with(['primaryImage', 'openBatch', 'artistProfile', 'character.fandom'])
+        return Product::with(['primaryImage', 'variants', 'openBatch', 'artistProfile', 'character.fandom'])
             ->whereIn('id', collect($this->lines)->pluck('product_id'))->get()->keyBy('id');
     }
 
@@ -123,17 +123,26 @@ class Checkout extends Component
                     continue;
                 }
                 $aid = $p->artist_profile_id;
-                $groups[$aid] ??= ['artist' => $p->artistProfile, 'packages' => [], 'pickupAllowed' => true, 'ready' => null];
+                $groups[$aid] ??= ['artist' => $p->artistProfile, 'packages' => [], 'pickupAllowed' => true, 'ready' => null, 'po_keys' => []];
                 $groups[$aid]['pickupAllowed'] = $groups[$aid]['pickupAllowed'] && $p->allow_event_pickup;
 
                 $batch = $p->is_pre_order ? $p->openBatch : null;
                 $price = $batch ? (float) $batch->price_po : (float) $p->price;
                 $scheme = $batch && $batch->is_dp && ($line['scheme'] ?? 'full') === 'dp' ? 'dp' : 'full';
-                $row = ['index' => $i, 'product' => $p, 'qty' => (int) $line['quantity'], 'price' => $price, 'batch' => $batch, 'scheme' => $scheme];
+                $row = ['index' => $i, 'product' => $p, 'variant' => $p->variants->firstWhere('id', $line['product_variant_id'] ?? null), 'qty' => (int) $line['quantity'], 'price' => $price, 'batch' => $batch, 'scheme' => $scheme];
 
                 if ($batch) {
-                    $groups[$aid]['packages'][] = ['label' => 'Pre-order · ' . $p->product_name, 'qty' => $row['qty'], 'subtotal' => $price * $row['qty'],
-                        'first' => $scheme === 'dp' ? (float) $batch->dp_amount * $row['qty'] : null, 'rows' => [$row]];
+                    $key = $batch->id . ':' . $scheme;
+                    if (! array_key_exists($key, $groups[$aid]['po_keys'])) {
+                        $groups[$aid]['po_keys'][$key] = count($groups[$aid]['packages']);
+                        $groups[$aid]['packages'][] = ['label' => 'Pre-order · ' . $p->product_name, 'qty' => 0, 'subtotal' => 0,
+                            'first' => $scheme === 'dp' ? 0 : null, 'rows' => []];
+                    }
+                    $k = $groups[$aid]['po_keys'][$key];
+                    $groups[$aid]['packages'][$k]['qty'] += $row['qty'];
+                    $groups[$aid]['packages'][$k]['subtotal'] += $price * $row['qty'];
+                    if ($scheme === 'dp') $groups[$aid]['packages'][$k]['first'] += (float) $batch->dp_amount * $row['qty'];
+                    $groups[$aid]['packages'][$k]['rows'][] = $row;
                 } else {
                     if ($groups[$aid]['ready'] === null) {
                         $groups[$aid]['ready'] = count($groups[$aid]['packages']);

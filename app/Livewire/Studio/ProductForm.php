@@ -10,6 +10,10 @@ use App\Models\FileUpload;
 use App\Models\MerchandiseType;
 use App\Models\PoBatch;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\OrderItem;
+use App\Models\CustomerOrder;
+use App\Support\Fail;
 use App\Services\NotificationService;
 use App\Services\PollService;
 use App\Services\PoService;
@@ -69,6 +73,26 @@ class ProductForm extends Component
     public bool $allow_event_pickup = false;
     public bool $publish = true;
 
+    /** Varian aktif; stock adalah kuota per batch untuk produk PO. */
+    public array $variants = [];
+    public array $variantPhotos = [];
+
+    public function addVariant(): void
+    {
+        if (count($this->variants) < 20) $this->variants[] = ['id' => null, 'name' => '', 'stock' => '0', 'original_stock' => null, 'image_url' => null];
+    }
+
+    public function removeVariant(int $index): void
+    {
+        unset($this->variants[$index], $this->variantPhotos[$index]);
+        $old = $this->variants; $photos = $this->variantPhotos;
+        $this->variants = []; $this->variantPhotos = [];
+        foreach ($old as $key => $row) {
+            $new = count($this->variants); $this->variants[] = $row;
+            if (isset($photos[$key])) $this->variantPhotos[$new] = $photos[$key];
+        }
+    }
+
     // ---- Batch PO ----
     public string $payment_scheme = 'full';
     public string $dp_amount = '';
@@ -97,7 +121,7 @@ class ProductForm extends Component
                 404
             );
 
-            $product->load(['character', 'images', 'openBatch']);
+            $product->load(['character', 'images', 'openBatch', 'variants']);
             $this->product = $product;
 
             $this->fill([
@@ -114,6 +138,11 @@ class ProductForm extends Component
                 'publish'             => $product->product_status === 'active',
                 'keptImageIds'        => $product->images->pluck('id')->all(),
             ]);
+
+            $this->variants = $product->variants->map(fn ($v) => [
+                'id' => $v->id, 'name' => $v->name, 'stock' => (string) $v->stock,
+                'original_stock' => $v->stock, 'image_url' => $v->image_url,
+            ])->all();
 
             $batch = $product->batches()->where('batch_status', 'open')->latest('id')->first();
             if ($batch) {
@@ -329,7 +358,7 @@ class ProductForm extends Component
             'fandom_character_id' => ['required', Rule::exists('fandom_character', 'id')->where('fandom_id', $this->fandom_id)->whereIn('status', self::SELECTABLE)],
             'merchandise_type_id' => ['required', Rule::exists('merchandise_type', 'id')->whereIn('status', self::SELECTABLE)],
             'availability_type'   => ['required', Rule::in(['ready_stock', 'pre_order'])],
-            'stock'               => [$isPo ? 'nullable' : 'required', 'integer', 'min:0', 'max:99999'],
+            'stock'               => [$isPo || count($this->variants) ? 'nullable' : 'required', 'integer', 'min:0', 'max:99999'],
             'allow_event_pickup'  => ['boolean'],
             'publish'             => ['boolean'],
 
@@ -340,6 +369,10 @@ class ProductForm extends Component
             'min_order'       => ['nullable', 'integer', 'min:1', 'max:99999'],
             'max_slot'        => ['nullable', 'integer', 'min:1', 'max:99999', ...($this->min_order !== '' ? ['gte:min_order'] : [])],
 
+            'variants' => ['array', 'max:20'],
+            'variants.*.name' => ['required', 'string', 'min:1', 'max:100', 'distinct'],
+            'variants.*.stock' => ['required', 'integer', 'min:0', 'max:99999'],
+            'variantPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
@@ -365,7 +398,7 @@ class ProductForm extends Component
 
     public function updated($property): void
     {
-        if (! in_array($property, ['newPhotos', 'photos', 'proposalName'], true) && ! str_starts_with($property, 'newPhotos')) {
+        if (! in_array($property, ['newPhotos', 'photos', 'proposalName'], true) && ! str_starts_with($property, 'newPhotos') && ! str_starts_with($property, 'variantPhotos') && ! str_starts_with($property, 'variants')) {
             $this->validateOnly($property);
         }
     }
@@ -389,12 +422,29 @@ class ProductForm extends Component
             return null;
         }
 
+        foreach ($this->variants as $i => $row) {
+            if (! isset($this->variantPhotos[$i]) && empty($row['id'])) {
+                $this->addError('variantPhotos.'.$i, 'Foto varian wajib diunggah.'); return null;
+            }
+        }
         $shop = Auth::user()->artistProfile;
         $isPo = $this->availability_type === 'pre_order';
         $isNew = ! $this->product;
 
         $product = DB::transaction(function () use ($data, $shop, $isPo) {
-            $product = $this->product ?? new Product(['artist_profile_id' => $shop->id]);
+            $product = $this->product ? Product::whereKey($this->product->id)->where('artist_profile_id', $shop->id)->lockForUpdate()->firstOrFail()
+                : new Product(['artist_profile_id' => $shop->id]);
+            if ($product->exists) {
+                $oldIds = $product->variants()->pluck('id')->map(fn ($id) => (int) $id)->all();
+                $newIds = collect($this->variants)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+                Fail::unless(! array_diff($newIds, $oldIds), 'Varian tidak valid. Muat ulang halaman.');
+                $changesStructure = (bool) $oldIds !== (bool) $this->variants || count(array_diff($oldIds, $newIds)) > 0
+                    || $product->availability_type !== $data['availability_type'];
+                if ($changesStructure) {
+                    $active = OrderItem::where('product_id', $product->id)->whereHas('order', fn ($q) => $q->whereIn('order_status', CustomerOrder::ACTIVE))->exists();
+                    Fail::unless(! $active, 'Selesaikan atau batalkan pesanan aktif sebelum menghapus varian atau mengubah jenis produk.');
+                }
+            }
 
             if (! $this->product && $this->designOption) {
                 $product->design_option_id = $this->designOption->id;
@@ -407,12 +457,13 @@ class ProductForm extends Component
                 'description'         => trim((string) $data['description']) ?: null,
                 'size'                => trim((string) $data['size']) ?: null,
                 'price'               => (int) $data['price'],
-                'stock'               => $isPo ? 0 : (int) $data['stock'],
+                'stock'               => $isPo || count($this->variants) ? 0 : (int) $data['stock'],
                 'availability_type'   => $data['availability_type'],
                 'allow_event_pickup'  => (bool) $data['allow_event_pickup'],
                 'product_status'      => $data['publish'] ? 'active' : 'inactive',
             ])->save();
 
+            $this->syncVariants($product, $isPo);
             $this->syncBatch($product, $isPo);
             $this->syncPhotos($product);
 
@@ -431,6 +482,32 @@ class ProductForm extends Component
             . ($waiting ? ' Produk tampil di katalog setelah admin menyetujui usulan ' . collect($waiting)->pluck('name')->join(', ', ' & ') . '.' : ''));
 
         return $this->redirect(route('studio.dashboard'), navigate: true);
+    }
+
+    private function syncVariants(Product $product, bool $isPo): void
+    {
+        $existing = $product->variants()->lockForUpdate()->get()->keyBy('id');
+        $kept = []; $total = 0;
+        foreach ($this->variants as $i => $row) {
+            $variant = ! empty($row['id']) ? $existing->get((int) $row['id']) : new ProductVariant(['product_id' => $product->id]);
+            Fail::unless((bool) $variant, 'Varian tidak valid.');
+            $stock = (int) $row['stock'];
+            if ($variant->exists && $variant->stock !== (int) ($row['original_stock'] ?? -1)) {
+                Fail::unless($stock === (int) ($row['original_stock'] ?? -1), 'Stok berubah sejak halaman dibuka. Muat ulang sebelum mengubah stok.');
+                $stock = $variant->stock;
+            }
+            if ($isPo && $variant->exists && ($batch = $product->openBatch)) {
+                $already = $variant->stock - $variant->remainingForBatch($batch);
+                Fail::unless($stock >= $already, 'Kuota varian tidak boleh kurang dari jumlah yang sudah dipesan.');
+            }
+            $url = $variant->image_url;
+            if (isset($this->variantPhotos[$i])) $url = '/uploads/'.$this->variantPhotos[$i]->store('products/variants', 'uploads');
+            Fail::unless((bool) $url, 'Foto varian wajib diunggah.');
+            $variant->fill(['name' => trim($row['name']), 'stock' => $stock, 'image_url' => $url, 'is_active' => true])->save();
+            $kept[] = $variant->id; $total += $stock;
+        }
+        if ($existing->isNotEmpty()) ProductVariant::whereIn('id', $existing->keys()->diff($kept))->update(['is_active' => false]);
+        if (! $isPo && $this->variants) $product->update(['stock' => $total]);
     }
 
     private function syncBatch(Product $product, bool $isPo): void

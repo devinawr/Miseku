@@ -14,14 +14,21 @@
                 </label>
                 <ul class="mt-4 divide-y divide-ink-100">
                     @foreach ($products as $p)
-                        <li class="flex items-center gap-3 py-3" wire:key="ot-{{ $p->id }}">
-                            <img src="{{ $p->cover_url }}" class="h-12 w-12 rounded-lg object-cover" alt="">
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate font-bold text-ink-900">{{ $p->product_name }}</p>
-                                <p class="text-xs text-ink-500"><x-rupiah :value="$p->price" /> · stok {{ $p->stock }}</p>
-                            </div>
-                            <input type="number" min="0" max="{{ $p->stock }}" wire:model.live.debounce.300ms="qty.{{ $p->id }}" class="ms-input w-20 text-center" placeholder="0" @disabled($p->stock < 1)>
-                        </li>
+                        @if ($p->variants->isNotEmpty())
+                            @foreach ($p->variants as $v)
+                                <li class="flex items-center gap-3 py-3" wire:key="ot-v-{{ $v->id }}">
+                                    <img src="{{ $v->image_url }}" class="h-12 w-12 rounded-lg object-cover" alt="">
+                                    <div class="min-w-0 flex-1"><p class="truncate font-bold text-ink-900">{{ $p->product_name }} · {{ $v->name }}</p><p class="text-xs text-ink-500">Stok {{ $v->stock }} pcs</p></div>
+                                    <input type="number" min="0" max="{{ $v->stock }}" wire:model.live.debounce.300ms="variantQty.{{ $v->id }}" class="ms-input w-20 text-center" placeholder="0" @disabled($v->stock < 1)>
+                                </li>
+                            @endforeach
+                        @else
+                            <li class="flex items-center gap-3 py-3" wire:key="ot-{{ $p->id }}">
+                                <img src="{{ $p->cover_url }}" class="h-12 w-12 rounded-lg object-cover" alt="">
+                                <div class="min-w-0 flex-1"><p class="truncate font-bold text-ink-900">{{ $p->product_name }}</p><p class="text-xs text-ink-500">Stok {{ $p->stock }} pcs</p></div>
+                                <input type="number" min="0" max="{{ $p->stock }}" wire:model.live.debounce.300ms="qty.{{ $p->id }}" class="ms-input w-20 text-center" placeholder="0" @disabled($p->stock < 1)>
+                            </li>
+                        @endif
                     @endforeach
                 </ul>
             </section>
@@ -37,7 +44,7 @@
     <div class="ms-card divide-y divide-ink-100">
         @foreach ($stockLogs as $log)
             <div class="flex flex-wrap justify-between gap-2 px-5 py-3 text-sm" wire:key="stock-log-{{ $log->id }}">
-                <span><b>{{ $log->quantity }}× {{ $log->product_name }}</b> · {{ $log->event_name }} @if($log->booth_name) · Booth {{ $log->booth_name }} @endif</span>
+                <span><b>{{ $log->quantity }}× {{ $log->product_name }}@if($log->variant_name) · {{ $log->variant_name }}@endif</b> · {{ $log->event_name }} @if($log->booth_name) · Booth {{ $log->booth_name }} @endif</span>
                 <span>{{ $log->created_at->translatedFormat('d M Y H:i') }}</span>
             </div>
         @endforeach

@@ -26,7 +26,7 @@
     <div class="mt-5 grid gap-8 lg:grid-cols-12">
 
         {{-- ============ Galeri ============ --}}
-        <div class="lg:col-span-6" x-data="{ active: 0, images: @js($images) }">
+        <div class="lg:col-span-6" x-data="{ active: 0, images: @js($images) }" x-on:variant-selected.window="images = [$event.detail.url, ...@js($images)]; active = 0">
             <div class="relative overflow-hidden rounded-[var(--radius-card)] border border-ink-200/70 bg-white">
                 <div class="aspect-square bg-ink-100">
                     <template x-for="(img, i) in images" :key="i">
@@ -144,6 +144,22 @@
                 @endif
             </div>
 
+            @if ($product->variants->isNotEmpty())
+                <div class="mt-5">
+                    <p class="ms-label">Pilih varian</p>
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        @foreach ($product->variants as $variant)
+                            <button type="button" wire:click="selectVariant({{ $variant->id }})" wire:key="variant-{{ $variant->id }}"
+                                    class="overflow-hidden rounded-xl border-2 text-left {{ $variantId === $variant->id ? 'border-brand-500' : 'border-ink-200' }}">
+                                <img src="{{ $variant->image_url }}" alt="{{ $variant->name }}" class="aspect-square w-full object-cover">
+                                <span class="block p-2 text-xs font-bold">{{ $variant->name }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                    @if ($this->selectedVariant) <p class="mt-2 text-sm">Dipilih: <b>{{ $this->selectedVariant->name }}</b></p> @endif
+                </div>
+            @endif
+
             {{-- Kuantitas + tombol --}}
             @if ($isOwn)
                 <div class="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-brand-300 bg-brand-50 p-4 text-sm text-brand-800">
@@ -172,7 +188,7 @@
                             </button>
                         </div>
                         <span class="text-xs text-ink-500">
-                            {{ $product->is_pre_order ? 'Maks. '.$this->maxQuantity.' pcs per pesanan' : 'Tersisa '.$product->stock.' pcs' }}
+                            {{ $product->is_pre_order ? 'Maks. '.$this->maxQuantity.' pcs per pesanan' : 'Tersisa '.($this->selectedVariant?->stock ?? $product->stock).' pcs' }}
                         </span>
                     </div>
 

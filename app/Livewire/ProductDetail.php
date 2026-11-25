@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ProductView;
 use App\Models\OrderItem;
 use App\Services\CartService;
@@ -28,6 +29,7 @@ class ProductDetail extends Component
     public Product $product;
 
     public int $quantity = 1;
+    public ?int $variantId = null;
 
     /** Skema bayar PO: 'full' (lunas) atau 'dp' (hanya bila batch mengizinkan DP). */
     public string $scheme = 'full';
@@ -38,6 +40,7 @@ class ProductDetail extends Component
 
         $this->product = $product->load([
             'images',
+            'variants',
             'openBatch',
             'artistProfile.user',
             'character.fandom',
@@ -93,15 +96,36 @@ class ProductDetail extends Component
     }
 
     #[Computed]
+    public function selectedVariant(): ?ProductVariant
+    {
+        return $this->variantId ? $this->product->variants()->whereKey($this->variantId)->first() : null;
+    }
+
+    public function selectVariant(int $id): void
+    {
+        $variant = $this->product->variants()->whereKey($id)->first();
+        if (! $variant) return;
+        $this->variantId = $id;
+        $this->updatedVariantId();
+        $this->dispatch('variant-selected', url: $variant->image_url);
+    }
+
+    public function updatedVariantId(): void
+    {
+        unset($this->selectedVariant, $this->maxQuantity, $this->unavailableReason);
+        $this->quantity = 1;
+    }
+
+    #[Computed]
     public function maxQuantity(): int
     {
-        return max(1, app(CartService::class)->maxQuantity($this->product));
+        return max(1, app(CartService::class)->maxQuantity($this->product, $this->selectedVariant));
     }
 
     #[Computed]
     public function unavailableReason(): ?string
     {
-        return app(CartService::class)->unavailableReason($this->product);
+        return app(CartService::class)->unavailableReason($this->product, $this->selectedVariant);
     }
 
     public function updatedQuantity(): void
@@ -132,7 +156,7 @@ class ProductDetail extends Component
         }
 
         try {
-            $item = app(CartService::class)->add(Auth::user(), $this->product, $this->quantity);
+            $item = app(CartService::class)->add(Auth::user(), $this->product, $this->quantity, $this->selectedVariant);
         } catch (ValidationException $e) {
             $this->dispatch('toast', message: $e->errors()['cart'][0] ?? 'Gagal menambahkan.', tone: 'error');
 
@@ -164,17 +188,17 @@ class ProductDetail extends Component
 
         $cart = app(CartService::class);
         $this->product->load('openBatch');
-        if ($reason = $cart->unavailableReason($this->product)) {
+        if ($reason = $cart->unavailableReason($this->product, $this->selectedVariant)) {
             $this->dispatch('toast', message: $reason, tone: 'error');
 
             return null;
         }
 
-        $qty = max(1, min($cart->maxQuantity($this->product), (int) $this->quantity));
+        $qty = max(1, min($cart->maxQuantity($this->product, $this->selectedVariant), (int) $this->quantity));
         $this->updatedScheme();
 
         session([
-            'checkout_lines'    => [['product_id' => $this->product->id, 'quantity' => $qty, 'scheme' => $this->scheme]],
+            'checkout_lines'    => [['product_id' => $this->product->id, 'product_variant_id' => $this->selectedVariant?->id, 'quantity' => $qty, 'scheme' => $this->scheme]],
             'checkout_cart_ids' => [],
         ]);
 

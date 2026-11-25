@@ -48,6 +48,11 @@ class Product extends Model
         return $this->belongsTo(MerchandiseType::class, 'merchandise_type_id');
     }
 
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id')->where('is_active', true)->orderBy('id');
+    }
+
     public function batches(): HasMany
     {
         return $this->hasMany(PoBatch::class, 'product_id');

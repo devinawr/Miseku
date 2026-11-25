@@ -12,7 +12,7 @@ class CartItem extends Model
     /** ERD memakai added_at (bukan created_at) + updated_at. */
     const CREATED_AT = 'added_at';
 
-    protected $fillable = ['user_id', 'product_id', 'quantity'];
+    protected $fillable = ['user_id', 'product_id', 'product_variant_id', 'quantity'];
 
     protected function casts(): array
     {
@@ -26,6 +26,11 @@ class CartItem extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
     public function product(): BelongsTo

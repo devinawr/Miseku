@@ -167,6 +167,29 @@
                 </div>
             </section>
 
+            <section class="ms-card space-y-4 p-5 sm:p-6">
+                <h2 class="font-extrabold text-ink-900">Varian produk (opsional)</h2>
+                <p class="ms-hint">Tambahkan karakter atau pilihan lain dengan foto dan stok masing-masing. Untuk PO, angka menjadi kuota per varian per batch. Harga sama untuk semua varian.</p>
+                @foreach ($variants as $i => $variant)
+                    <div class="grid gap-3 rounded-xl border border-ink-200 p-3 sm:grid-cols-3" wire:key="variant-form-{{ $i }}">
+                        <label><span class="ms-label">Nama varian</span><input class="ms-input" wire:model.blur="variants.{{ $i }}.name" maxlength="100">
+                            @error('variants.'.$i.'.name') <span class="ms-error">{{ $message }}</span> @enderror</label>
+                        <label><span class="ms-label">{{ $isPo ? 'Kuota per batch (pcs)' : 'Stok (pcs)' }}</span><input type="number" min="0" class="ms-input" wire:model.blur="variants.{{ $i }}.stock">
+                            @error('variants.'.$i.'.stock') <span class="ms-error">{{ $message }}</span> @enderror</label>
+                        <div><span class="ms-label">Foto varian</span>
+                            @if (!empty($variant['image_url'])) <img src="{{ $variant['image_url'] }}" class="mb-2 h-16 w-16 rounded object-cover" alt=""> @endif
+                            <input type="file" wire:model="variantPhotos.{{ $i }}" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm">
+                            @error('variantPhotos.'.$i) <span class="ms-error">{{ $message }}</span> @enderror
+                            <button type="button" wire:click="removeVariant({{ $i }})" class="ms-link mt-2 text-xs">Hapus varian</button>
+                        </div>
+                    </div>
+                @endforeach
+                @error('variants') <p class="ms-error">{{ $message }}</p> @enderror
+                @error('action') <p class="ms-error">{{ $message }}</p> @enderror
+                <button type="button" wire:click="addVariant" class="ms-btn-soft" @disabled(count($variants) >= 20)>+ Tambah varian</button>
+                <div wire:loading wire:target="variantPhotos" class="ms-hint">Mengunggah foto varian…</div>
+            </section>
+
             {{-- ===== Ketersediaan ===== --}}
             <section class="ms-card space-y-5 p-5 sm:p-6">
                 <h2 class="font-extrabold text-ink-900">Ketersediaan</h2>
@@ -191,11 +214,13 @@
                 </div>
 
                 @if (! $isPo)
+                    @if (!count($variants))
                     <div class="sm:w-1/2">
                         <label for="stock" class="ms-label">Stok</label>
                         <input id="stock" type="number" min="0" wire:model.blur="stock" class="ms-input">
                         @error('stock') <p class="ms-error">{{ $message }}</p> @enderror
                     </div>
+                    @else <p class="ms-hint">Stok total dihitung dari stok setiap varian.</p> @endif
                 @else
                     <div class="grid gap-5 rounded-2xl bg-ink-50 p-4 sm:grid-cols-2 sm:p-5">
                         <div class="sm:col-span-2">

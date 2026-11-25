@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\PoBatch;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use App\Support\Fail;
 use App\Support\Money;
@@ -51,7 +52,8 @@ class OrderService
     {
         Fail::unless(count($lines) > 0, 'Belum ada produk yang dipilih untuk checkout.');
         $ids = collect($lines)->pluck('product_id')->map(fn ($id) => (int) $id);
-        Fail::unless($ids->every(fn ($id) => $id > 0) && $ids->unique()->count() === $ids->count(), 'Produk duplikat atau tidak valid. Muat ulang keranjang.');
+        $keys = collect($lines)->map(fn ($line) => (int) ($line['product_id'] ?? 0) . ':' . (int) ($line['product_variant_id'] ?? 0));
+        Fail::unless($ids->every(fn ($id) => $id > 0) && $keys->unique()->count() === $keys->count(), 'Produk atau varian duplikat/tidak valid. Muat ulang keranjang.');
 
         return DB::transaction(function () use ($buyer, $lines, $shippingByArtist, $addressId, $cartItemIds) {
             $products = Product::whereIn('id', collect($lines)->pluck('product_id'))
@@ -68,22 +70,33 @@ class OrderService
                 $qty = (int) $line['quantity'];
                 Fail::unless($qty >= 1 && $qty <= \App\Services\CartService::MAX_PER_ITEM, 'Jumlah tidak valid.');
 
+                $variantId = (int) ($line['product_variant_id'] ?? 0);
+                $variant = $variantId ? ProductVariant::where('product_id', $p->id)->where('is_active', true)->whereKey($variantId)->lockForUpdate()->first() : null;
+                Fail::unless(! $variantId || $variant, 'Varian tidak tersedia untuk produk ini.');
+                Fail::unless($variant || ! $p->variants()->exists(), 'Pilih varian untuk produk ini.');
                 $batch = null;
                 if ($p->is_pre_order) {
                     $batch = PoBatch::where('product_id', $p->id)->open()->latest('id')->lockForUpdate()->first();
                     Fail::unless((bool) $batch, "Pre-order {$p->product_name} sudah ditutup.");
                     $left = $batch->remainingSlot();
                     Fail::unless($left === null || $qty <= $left, "Sisa slot PO {$p->product_name} tinggal {$left} pcs.");
+                    if ($variant) Fail::unless($qty <= $variant->remainingForBatch($batch), "Kuota varian {$variant->name} tidak mencukupi.");
                     $scheme = ($line['scheme'] ?? 'full') === 'dp' && $batch->is_dp ? 'dp' : 'full';
                     $price = (float) $batch->price_po;
                 } else {
-                    Fail::unless($p->stock >= $qty, "Stok {$p->product_name} tersisa {$p->stock} pcs.");
+                    Fail::unless(($variant?->stock ?? $p->stock) >= $qty, "Stok {$p->product_name} tidak mencukupi.");
                     $scheme = 'full';
                     $price = (float) $p->price;
                 }
 
-                return compact('p', 'qty', 'batch', 'scheme', 'price');
+                return compact('p', 'qty', 'batch', 'scheme', 'price', 'variant');
             });
+
+            // Total beberapa varian dari batch yang sama harus tetap <= kuota keseluruhan.
+            foreach ($prepared->filter(fn ($r) => $r['batch'])->groupBy(fn ($r) => $r['batch']->id) as $rows) {
+                $left = $rows->first()['batch']->remainingSlot();
+                Fail::unless($left === null || $rows->sum('qty') <= $left, 'Total varian melebihi sisa kuota PO.');
+            }
 
             $address = $addressId ? Address::where('user_id', $buyer->id)->find($addressId) : null;
 
@@ -98,8 +111,9 @@ class OrderService
                 if ($ready->isNotEmpty()) {
                     $packages->push(['type' => 'ready_stock', 'scheme' => 'full', 'rows' => $ready]);
                 }
-                foreach ($rows->filter(fn ($r) => $r['batch']) as $r) {
-                    $packages->push(['type' => 'pre_order', 'scheme' => $r['scheme'], 'rows' => collect([$r])]);
+                // Varian dalam batch dan skema bayar yang sama menjadi satu pesanan/ongkir.
+                foreach ($rows->filter(fn ($r) => $r['batch'])->groupBy(fn ($r) => $r['batch']->id . ':' . $r['scheme']) as $poRows) {
+                    $packages->push(['type' => 'pre_order', 'scheme' => $poRows->first()['scheme'], 'rows' => $poRows]);
                 }
 
                 foreach ($packages as $pkg) {
@@ -234,12 +248,16 @@ class OrderService
                 'customer_order_id' => $order->id,
                 'product_id'        => $r['p']->id,
                 'po_batch_id'       => $r['batch']?->id,
+                'product_variant_id' => $r['variant']?->id,
+                'variant_name' => $r['variant']?->name,
+                'variant_image_url' => $r['variant']?->image_url,
                 'quantity'          => $r['qty'],
                 'unit_price'        => $r['price'],
                 'subtotal'          => $r['price'] * $r['qty'],
             ]);
 
             if (! $r['batch']) {
+                if ($r['variant']) $r['variant']->decrement('stock', $r['qty']);
                 $r['p']->decrement('stock', $r['qty']); // kurangi stok saat pesanan dibuat
             }
         }
@@ -473,6 +491,23 @@ class OrderService
         });
     }
 
+    /** Terapkan hasil API hanya bila resi dan kurir tidak berubah sejak diminta. */
+    public function markDeliveredFromTracking(int $orderId, string $awb, string $courier, int $addressId, string $recipient): bool
+    {
+        return DB::transaction(function () use ($orderId, $awb, $courier, $addressId, $recipient) {
+            $order = CustomerOrder::whereKey($orderId)->lockForUpdate()->first();
+            if (! $order || $order->order_status !== 'shipped' || $order->shipping_method !== 'courier'
+                || $order->delivered_at || trim((string) $order->tracking_number) !== $awb
+                || trim((string) $order->courier) !== $courier || (int) $order->address_id !== $addressId) return false;
+            $address = Address::whereKey($addressId)->lockForUpdate()->first();
+            if (! $address || trim((string) $address->recipient_name) !== $recipient) return false;
+            $order->update(['delivered_at' => now()]);
+            $this->notify->send($order->buyer_id, 'order', 'Paket tercatat tiba',
+                "Kurir melaporkan paket {$order->order_code} tiba. Jika ada kendala, segera hubungi CS. Pesanan dapat selesai otomatis setelah " . config('miseku.auto_complete_days') . ' hari.', $order);
+            return true;
+        });
+    }
+
     /** Kunci baris dan periksa ulang seluruh syarat sebelum melepaskan dana. */
     public function autoCompleteDelivered(CustomerOrder $order): bool
     {
@@ -538,6 +573,9 @@ class OrderService
 
     public function restoreStock(CustomerOrder $order): void
     {
-        $order->items()->whereNull('po_batch_id')->get()->each(fn (OrderItem $i) => Product::whereKey($i->product_id)->increment('stock', $i->quantity));
+        $order->items()->whereNull('po_batch_id')->get()->each(function (OrderItem $i) {
+            if ($i->product_variant_id) ProductVariant::whereKey($i->product_variant_id)->increment('stock', $i->quantity);
+            Product::whereKey($i->product_id)->increment('stock', $i->quantity);
+        });
     }
 }

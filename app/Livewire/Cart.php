@@ -40,12 +40,12 @@ class Cart extends Component
 
         return CartItem::query()
             ->where('user_id', Auth::id())
-            ->with(['product.primaryImage', 'product.openBatch', 'product.artistProfile', 'product.character.fandom', 'product.merchandiseType'])
+            ->with(['variant', 'product.primaryImage', 'product.openBatch', 'product.artistProfile', 'product.character.fandom', 'product.merchandiseType'])
             ->latest('added_at')
             ->get()
             ->each(function (CartItem $item) use ($service) {
-                $item->unavailable = $service->unavailableReason($item->product);
-                $item->max = $service->maxQuantity($item->product);
+                $item->unavailable = $service->unavailableReason($item->product, $item->variant);
+                $item->max = $service->maxQuantity($item->product, $item->variant);
                 if ($item->unavailable === null && $item->quantity > $item->max) {
                     $item->unavailable = "Jumlah melebihi batas ({$item->max} pcs). Kurangi jumlahnya.";
                 }
@@ -109,8 +109,8 @@ class Cart extends Component
     public function adjustToAvailable(int $id): void
     {
         $item = $this->find($id)->load('product.openBatch');
-        $max = app(CartService::class)->maxQuantity($item->product);
-        if ($max < 1 || app(CartService::class)->unavailableReason($item->product)) {
+        $max = app(CartService::class)->maxQuantity($item->product, $item->variant);
+        if ($max < 1 || app(CartService::class)->unavailableReason($item->product, $item->variant)) {
             $this->dispatch('toast', message: 'Produk tidak tersedia saat ini.', tone: 'error');
             $this->refresh(); return;
         }
@@ -181,6 +181,7 @@ class Cart extends Component
         session([
             'checkout_lines' => $chosen->map(fn (CartItem $i) => [
                 'product_id' => $i->product_id,
+                'product_variant_id' => $i->product_variant_id,
                 'quantity'   => (int) $i->quantity,
                 'scheme'     => $i->product->openBatch?->is_dp ? $this->schemeFor($i->product_id) : 'full',
             ])->values()->all(),

@@ -39,6 +39,7 @@ return [
     // RajaOngkir (Komerce). Kosongkan key → ongkir dihitung dari tabel tarif lokal (simulasi).
     'rajaongkir' => [
         'key'      => env('RAJAONGKIR_API_KEY'),
+        'tracking_enabled' => env('RAJAONGKIR_TRACKING_ENABLED', false),
         'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
     ],
 

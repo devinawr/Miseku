@@ -53,9 +53,10 @@
     <ul class="divide-y divide-ink-100">
         @foreach ($o->items as $item)
             <li class="flex gap-3 px-5 py-3.5" wire:key="it-{{ $item->id }}">
-                <img src="{{ $item->product?->cover_url }}" class="h-16 w-16 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
+                <img src="{{ $item->variant_image_url ?? $item->product?->cover_url }}" class="h-16 w-16 shrink-0 rounded-xl bg-ink-100 object-cover" alt="">
                 <div class="min-w-0 flex-1">
                     <a href="{{ $sellerView && $item->product ? route('studio.product.edit', $item->product_id) : route('product.detail', $item->product_id) }}" wire:navigate class="font-bold text-ink-900 hover:text-brand-700">{{ $item->product?->product_name }}</a>
+                    @if ($item->variant_name) <p class="text-xs font-bold text-brand-700">Varian: {{ $item->variant_name }}</p> @endif
                     <p class="text-sm text-ink-500">{{ $item->quantity }} × <x-rupiah :value="$item->unit_price" /></p>
                     @if ($item->batch)
                         <p class="text-xs text-ink-500">Batch PO #{{ $item->batch->id }} · {{ $item->batch->status_label }} · tutup {{ $item->batch->closes_at?->translatedFormat('d M Y') }} · min {{ $item->batch->min_order }} pcs · estimasi {{ $item->batch->estimated_month?->translatedFormat('F Y') }}</p>

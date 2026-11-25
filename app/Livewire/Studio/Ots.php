@@ -27,6 +27,7 @@ class Ots extends Component
 
     /** product_id => qty */
     public array $qty = [];
+    public array $variantQty = [];
 
 
     public function mount(): void
@@ -49,9 +50,10 @@ class Ots extends Component
             return;
         }
 
-        $count = $this->attempt(fn () => app(OtsService::class)->sell(Auth::user()->artistProfile, $booth, $this->qty));
+        $count = $this->attempt(fn () => app(OtsService::class)->sell(Auth::user()->artistProfile, $booth, $this->qty, $this->variantQty));
         if ($count) {
             $this->qty = [];
+            $this->variantQty = [];
             $this->dispatch('toast', message: "Stok berkurang {$count} pcs dan tercatat di riwayat OTS.");
         }
     }
@@ -59,9 +61,9 @@ class Ots extends Component
     public function render()
     {
         $profileId = Auth::user()->artistProfile->id;
-        $products = Product::with('primaryImage')->where('artist_profile_id', $profileId)->where('availability_type', 'ready_stock')
+        $products = Product::with(['primaryImage', 'variants'])->where('artist_profile_id', $profileId)->where('availability_type', 'ready_stock')
             ->where('product_status', '!=', 'deleted')->orderBy('product_name')->get();
-        $total = collect($this->qty)->sum(fn ($q) => max(0, (int) $q));
+        $total = collect($this->qty)->merge($this->variantQty)->sum(fn ($q) => max(0, (int) $q));
 
         return view('livewire.studio.ots', [
             'booths'   => $this->booths(),

@@ -51,7 +51,7 @@
                                     <input type="checkbox" class="ms-check mt-8" value="{{ $item->id }}" wire:model.live="selected" @disabled($item->unavailable)>
 
                                     <a href="{{ route('product.detail', $p) }}" wire:navigate class="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-ink-100 sm:h-24 sm:w-24">
-                                        <img src="{{ $p->cover_url }}" alt="" class="h-full w-full object-cover {{ $item->unavailable ? 'opacity-50 grayscale' : '' }}">
+                                        <img src="{{ $item->variant?->image_url ?? $p->cover_url }}" alt="" class="h-full w-full object-cover {{ $item->unavailable ? 'opacity-50 grayscale' : '' }}">
                                     </a>
 
                                     <div class="min-w-0 flex-1">
@@ -59,6 +59,7 @@
                                             <div class="min-w-0">
                                                 <p class="text-[11px] font-bold tracking-wide text-accent-600 uppercase">{{ $p->fandom_name }}</p>
                                                 <a href="{{ route('product.detail', $p) }}" wire:navigate class="line-clamp-2 text-sm font-bold text-ink-900 hover:text-brand-700">{{ $p->product_name }}</a>
+                                                @if ($item->variant) <p class="text-xs font-bold text-brand-700">Varian: {{ $item->variant->name }}</p> @endif
                                                 <p class="mt-0.5 text-xs text-ink-500">{{ $p->character?->character_name }} · {{ $p->merchandiseType?->type_name }}</p>
                                             </div>
                                             <button type="button" wire:click="remove({{ $item->id }})" class="ms-icon-btn h-8 w-8 shrink-0 text-ink-400 hover:text-red-600" aria-label="Hapus">

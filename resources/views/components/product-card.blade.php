@@ -2,6 +2,7 @@
 
 @php
     $badge = $product->status_badge;
+    $variantCount = $product->relationLoaded('variants') ? $product->variants->count() : $product->variants()->count();
     $chip  = ['ready' => 'ms-chip-ready', 'po' => 'ms-chip-po', 'muted' => 'ms-chip-muted'][$badge['tone']];
 @endphp
 
@@ -12,6 +13,7 @@
 
         <span class="{{ $chip }} absolute top-2.5 left-2.5 shadow-sm">{{ $badge['label'] }}</span>
 
+        @if ($variantCount > 0) <span class="absolute right-2 top-2 rounded bg-brand-600 px-2 py-1 text-xs font-bold text-white">{{ $variantCount }} varian</span> @endif
         @if ($product->is_pre_order && $product->openBatch)
             <span class="absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 rounded-full bg-ink-900/75 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
                 <x-icon name="clock" class="h-3 w-3" stroke="2.2" />

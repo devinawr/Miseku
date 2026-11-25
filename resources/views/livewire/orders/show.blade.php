@@ -130,7 +130,7 @@
                             <textarea wire:model="shopComment" rows="2" class="ms-input mt-1" placeholder="Pelayanan artis (opsional)"></textarea>
                             @include('livewire.partials.review-photo-input', ['field' => 'shopPhotos', 'photos' => $shopPhotos, 'label' => 'Foto ulasan toko'])
                         </div>
-                        @foreach ($o->items as $item)
+                        @foreach ($o->items->unique('product_id') as $item)
                             <div wire:key="rv-{{ $item->product_id }}">
                                 <p class="ms-label">{{ $item->product?->product_name }}</p>
                                 <div class="flex gap-1">
