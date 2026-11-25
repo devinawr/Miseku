@@ -38,11 +38,11 @@
                 <p class="ms-hint text-amber-700">Lengkapi rekening di <a href="{{ route('account', ['tab' => 'toko']) }}" wire:navigate class="ms-link">Akun → Toko saya</a>.</p>
             @endif
             <div class="flex gap-2">
-                <input type="number" wire:model="amount" min="{{ config('miseku.withdrawal_minimum') }}" step="1000" class="ms-input flex-1" placeholder="Jumlah">
+                <input type="number" wire:model="amount" min="{{ config('miseku.withdrawal_minimum') }}" step="1" inputmode="numeric" class="ms-input flex-1" placeholder="Jumlah dalam rupiah">
                 <button type="submit" class="ms-btn-primary">Tarik</button>
             </div>
             @error('amount')<p class="ms-error">{{ $message }}</p>@enderror
-            <p class="ms-hint">Bisa diajukan: <b><x-rupiah :value="$eligibility['eligible']" /></b>. Minimal <x-rupiah :value="config('miseku.withdrawal_minimum')" />. Admin tetap mentransfer manual setelah memeriksa dana.</p>
+            <p class="ms-hint">Bisa diajukan: <b><x-rupiah :value="$eligibility['eligible']" /></b>. Minimal <x-rupiah :value="config('miseku.withdrawal_minimum')" />. Tidak harus kelipatan Rp1.000; masukkan rupiah bulat. Admin tetap mentransfer manual setelah memeriksa dana.</p>
             @if ($eligibility['waiting'] > 0)
                 <p class="rounded-xl bg-amber-50 p-2 text-sm text-amber-800">Saldo yang belum bisa diajukan: <x-rupiah :value="$eligibility['waiting']" />.
                     @if ($eligibility['waiting_settlement'] > 0) Sebagian dana menunggu 3 hari kerja. @endif
