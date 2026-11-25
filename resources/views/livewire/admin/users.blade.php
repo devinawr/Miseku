@@ -22,7 +22,7 @@
         </div>
     @endif
     @if (app(\App\Services\WithdrawalEligibilityService::class)->isDemoSimulation())
-        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo dan pembayaran adalah simulasi, bukan dana Midtrans asli.</p>
+        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo pembayaran SIM adalah simulasi, bukan dana Midtrans asli.</p>
     @endif
     <p class="mb-3 text-xs text-ink-500">Saldo dihitung dari catatan Miseku, bukan saldo Midtrans. Pengajuan diproses sudah dikurangi dari saldo bisa diajukan. Admin tetap wajib mengecek saldo Midtrans sebelum transfer.</p>
     <div class="ms-card overflow-x-auto">

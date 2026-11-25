@@ -4,7 +4,6 @@ use App\Models\ArtistProfile;
 use App\Models\BalanceTransaction;
 use App\Models\Payment;
 use App\Models\Withdrawal;
-use App\Services\MidtransGateway;
 use Carbon\CarbonImmutable;
 
 /** Perhitungan konservatif jurnal Miseku, bukan saldo provider. */
@@ -17,15 +16,20 @@ class WithdrawalEligibilityService
         $amount = (int) $whole * 100 + (int) substr(str_pad($fraction, 2, '0'), 0, 2);
         return $negative ? -$amount : $amount;
     }
-    /** Simulasi hanya untuk database demo lokal, tidak pernah aktif dengan key Midtrans. */
+    /** Aktif otomatis hanya untuk database contoh di MySQL lokal, bukan produksi. */
     public function isDemoSimulation(): bool
     {
-        $db = (string) config('database.connections.mysql.database');
+        $connection = config('database.connections.mysql', []);
+        $db = (string) ($connection['database'] ?? '');
         $isDemoDb = $db === 'miseku_demo_25nov2026'
             || (app()->environment('testing') && str_ends_with($db, '_test'));
-        return (bool) config('miseku.demo_settlement') && app()->environment(['local', 'testing'])
-            && config('database.default') === 'mysql' && $isDemoDb
-            && ! app(MidtransGateway::class)->isLive() && ! filled(config('services.midtrans.client_key'))
+        $localHost = in_array((string) ($connection['host'] ?? ''), ['127.0.0.1', 'localhost', '::1'], true);
+        $server = (string) config('services.midtrans.server_key');
+        $client = (string) config('services.midtrans.client_key');
+        $sandboxKeys = (blank($server) || str_starts_with($server, 'SB-Mid-server-'))
+            && (blank($client) || str_starts_with($client, 'SB-Mid-client-'));
+        return app()->environment(['local', 'testing']) && config('database.default') === 'mysql'
+            && $isDemoDb && $localHost && blank($connection['url'] ?? null) && $sandboxKeys
             && ! config('services.midtrans.is_production');
     }
 

@@ -2,7 +2,7 @@
     <x-admin-nav />
     <x-page-title title="Penarikan dana artis" subtitle="Transfer ke rekening artis, lalu unggah bukti. Ditolak → dana kembali ke saldo tersedia artis." />
     @if ($demoSimulation)
-        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo dan pembayaran adalah simulasi, bukan dana Midtrans asli.</p>
+        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo pembayaran SIM adalah simulasi, bukan dana Midtrans asli.</p>
     @endif
     <div class="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="ms-card p-5"><p class="text-sm text-ink-500">Total saldo toko</p><p class="mt-1 text-2xl font-extrabold"><x-rupiah :value="$totals['available'] + $totals['held']" /></p><p class="mt-1 text-xs text-ink-500">Saldo tersedia + tertahan pesanan.</p></div>

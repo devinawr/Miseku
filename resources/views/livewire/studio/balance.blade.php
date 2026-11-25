@@ -3,7 +3,7 @@
     <x-page-title title="Saldo & penarikan" subtitle="Dana pembeli ditahan sampai pesanan selesai, lalu dilepas ke saldo tersedia setelah dipotong admin fee." />
 
     @if (app(\App\Services\WithdrawalEligibilityService::class)->isDemoSimulation())
-        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo dan pembayaran adalah simulasi, bukan dana Midtrans asli.</p>
+        <p class="mb-4 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Mode demo: saldo pembayaran SIM adalah simulasi, bukan dana Midtrans asli.</p>
     @endif
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="ms-card p-5">
