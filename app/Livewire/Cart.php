@@ -105,6 +105,24 @@ class Cart extends Component
         $this->refresh();
     }
 
+    /** Sesuaikan jumlah secara sadar setelah stok berubah. */
+    public function adjustToAvailable(int $id): void
+    {
+        $item = $this->find($id)->load('product.openBatch');
+        $max = app(CartService::class)->maxQuantity($item->product);
+        if ($max < 1 || app(CartService::class)->unavailableReason($item->product)) {
+            $this->dispatch('toast', message: 'Produk tidak tersedia saat ini.', tone: 'error');
+            $this->refresh(); return;
+        }
+        try {
+            app(CartService::class)->update($item, $max);
+            $this->dispatch('toast', message: "Jumlah disesuaikan menjadi {$max} pcs. Pilih kembali produk untuk checkout.");
+        } catch (ValidationException $e) {
+            $this->dispatch('toast', message: $e->errors()['cart'][0], tone: 'error');
+        }
+        $this->refresh();
+    }
+
     public function remove(int $id): void
     {
         $this->find($id)->delete();
@@ -145,7 +163,14 @@ class Cart extends Component
     /** Bawa item yang dicentang & masih tersedia ke halaman checkout. */
     public function checkout()
     {
-        $chosen = $this->items->filter(fn (CartItem $i) => in_array((string) $i->id, $this->selected, true) && $i->unavailable === null);
+        // Muat ulang stok dan jangan diam-diam membuang item yang dipilih dari checkout.
+        unset($this->items, $this->groups, $this->summary);
+        $selectedItems = $this->items->filter(fn (CartItem $i) => in_array((string) $i->id, $this->selected, true));
+        if ($selectedItems->contains(fn (CartItem $i) => $i->unavailable !== null)) {
+            $this->dispatch('toast', message: 'Stok berubah. Sesuaikan jumlah atau hapus produk yang tidak tersedia.', tone: 'error');
+            return null;
+        }
+        $chosen = $selectedItems;
 
         if ($chosen->isEmpty()) {
             $this->dispatch('toast', message: 'Centang minimal satu produk yang masih tersedia.', tone: 'error');

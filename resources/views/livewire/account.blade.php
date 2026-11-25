@@ -257,8 +257,14 @@
             <form wire:submit="saveShop" class="ms-card max-w-2xl space-y-4 p-5 sm:p-6">
                 <div>
                     <h2 class="text-lg font-extrabold text-ink-900">{{ $user->artistProfile ? 'Toko saya' : 'Buka toko di Miseku' }}</h2>
-                    <p class="text-sm text-ink-500">{{ $user->artistProfile ? 'Nama toko, deskripsi, dan rekening untuk pencairan saldo.' : 'Jual merch karyamu sendiri. Akunmu jadi akun artis (tetap bisa belanja seperti biasa).' }}</p>
+                    <p class="text-sm text-ink-500">{{ $user->artistProfile ? 'Nama toko, deskripsi, dan rekening untuk pencairan saldo.' : 'Ajukan toko dengan akun sosial. Toko dibuka setelah admin memeriksa dan menyetujui.' }}</p>
                 </div>
+                @if (! $user->artistProfile && $shopApplication)
+                    <p class="text-sm">Pengajuan: {{ ['pending'=>'Menunggu admin', 'rejected'=>'Ditolak', 'approved'=>'Disetujui'][$shopApplication->status] ?? $shopApplication->status }} @if($shopApplication->review_note) · {{ $shopApplication->review_note }} @endif</p>
+                @endif
+                @if (! $user->artistProfile)
+                    <label class="block"><span class="ms-label">Tautan Instagram/X atau portofolio (wajib)</span><input type="url" wire:model="social_url" class="ms-input" placeholder="https://...">@error('social_url')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                @endif
                 <label class="block"><span class="ms-label">Nama toko</span><input type="text" wire:model="shop_name" class="ms-input">@error('shop_name')<p class="ms-error">{{ $message }}</p>@enderror</label>
                 <label class="block"><span class="ms-label">Deskripsi toko</span><textarea wire:model="shop_description" rows="3" class="ms-input"></textarea>@error('shop_description')<p class="ms-error">{{ $message }}</p>@enderror</label>
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -277,7 +283,7 @@
                         <label class="block"><span class="ms-label">Kode pos</span><input type="text" wire:model="shop_postal_code" class="ms-input">@error('shop_postal_code')<p class="ms-error">{{ $message }}</p>@enderror</label>
                     </div>
                 </div>
-                <button type="submit" class="ms-btn-primary">{{ $user->artistProfile ? 'Simpan' : 'Buka toko sekarang' }}</button>
+                <button type="submit" class="ms-btn-primary">{{ $user->artistProfile ? 'Simpan' : 'Kirim pengajuan toko' }}</button>
             </form>
         @endif
     </div>

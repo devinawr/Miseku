@@ -4,6 +4,9 @@ namespace App\Livewire\Admin;
 
 use App\Models\Event;
 use App\Models\EventBooth;
+use App\Models\EventProposal;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -15,6 +18,32 @@ use Livewire\Component;
 class Events extends Component
 {
     public ?int $editingId = null;
+    public array $proposalNotes = [];
+
+    public function decideProposal(int $id, bool $approve): void
+    {
+        abort_unless(Auth::user()->isAdmin(), 403);
+        $note = trim((string) ($this->proposalNotes[$id] ?? ''));
+        if (! $approve && mb_strlen($note) < 5) {
+            $this->addError("proposalNotes.$id", 'Alasan penolakan minimal 5 karakter.');
+            return;
+        }
+        if (mb_strlen($note) > 1000) { $this->addError("proposalNotes.$id", 'Catatan maksimal 1000 karakter.'); return; }
+        DB::transaction(function () use ($id, $approve, $note) {
+            $proposal = EventProposal::whereKey($id)->lockForUpdate()->with('artistProfile')->firstOrFail();
+            abort_unless($proposal->status === 'pending', 422);
+            if ($approve && $proposal->end_date->lt(today())) {
+                $this->addError("proposalNotes.$id", 'Tanggal event sudah lewat; tolak atau minta artis mengajukan ulang.'); return;
+            }
+            $event = $approve ? Event::create(['event_name'=>$proposal->event_name, 'location'=>$proposal->location,
+                'start_date'=>$proposal->start_date, 'end_date'=>$proposal->end_date, 'created_by'=>Auth::id()]) : null;
+            $proposal->update(['status'=>$approve ? 'approved' : 'rejected', 'reviewed_by'=>Auth::id(), 'reviewed_at'=>now(), 'review_note'=>$note ?: null, 'event_id'=>$event?->id]);
+            app(NotificationService::class)->send($proposal->artistProfile->user_id, 'order', 'Usulan event ' . ($approve ? 'disetujui' : 'ditolak'),
+                "Usulan event {$proposal->event_name} " . ($approve ? 'disetujui. Kamu dapat mendaftarkan booth.' : "ditolak. Alasan: {$note}"));
+        });
+        unset($this->proposalNotes[$id]);
+    }
+
 
     public string $event_name = '';
 
@@ -68,6 +97,7 @@ class Events extends Component
     {
         return view('livewire.admin.events', [
             'events' => Event::with('booths.artistProfile')->orderByDesc('start_date')->get(),
+            'proposals' => EventProposal::with('artistProfile')->where('status', 'pending')->latest('id')->get(),
         ]);
     }
 }

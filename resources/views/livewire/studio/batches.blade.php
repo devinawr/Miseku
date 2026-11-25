@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <x-studio-nav />
-    <x-page-title title="Batch pre-order" subtitle="PO otomatis ditutup di tanggal tutup. Target minimum tidak tercapai → batch batal & pembeli direfund otomatis." />
+    <x-page-title title="Batch pre-order" subtitle="PO otomatis ditutup di tanggal tutup. Target minimum tidak tercapai → batch batal & refund pembeli diproses." />
 
     <div class="grid gap-4 lg:grid-cols-2">
         @forelse ($batches as $b)
@@ -30,8 +30,24 @@
                     @elseif ($b->batch_status === 'in_production')
                         <button type="button" wire:click="complete({{ $b->id }})" wire:confirm="Tandai produksi batch ini selesai? Pembeli DP menerima tagihan pelunasan ({{ config('miseku.settlement_days') }} hari)." class="ms-btn-primary">Produksi selesai</button>
                     @endif
+                    @if (in_array($b->batch_status, ['open', 'closed', 'in_production']))
+                        <button type="button" wire:click="editEstimate({{ $b->id }})" class="ms-btn-ghost">Ubah estimasi</button>
+                    @endif
                     <a href="{{ route('studio.orders', ['tab' => 'po', 'batch' => $b->id]) }}" wire:navigate class="ms-btn-ghost">Pesanan</a>
                 </div>
+                @if ($b->estimate_change_reason)
+                    <p class="mt-3 text-sm text-ink-500">Alasan perubahan terakhir: {{ $b->estimate_change_reason }}</p>
+                @endif
+                @if ($editingEstimateId === $b->id)
+                    <div class="mt-4 space-y-3 border-t pt-4">
+                        <label class="block"><span class="ms-label">Bulan estimasi baru</span><input type="month" wire:model="estimateMonth" class="ms-input"></label>
+                        @error('estimateMonth') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+                        <label class="block"><span class="ms-label">Alasan perubahan (wajib)</span><textarea wire:model="estimateReason" class="ms-input" maxlength="1000"></textarea></label>
+                        @error('estimateReason') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+                        <button type="button" wire:click="saveEstimate" class="ms-btn-primary">Simpan dan beri tahu pembeli</button>
+                        <button type="button" wire:click="$set('editingEstimateId', null)" class="ms-btn-ghost">Batal</button>
+                    </div>
+                @endif
             </div>
         @empty
             <x-empty-state icon="clock" title="Belum ada batch PO" description="Buat produk dengan status Pre-order dari halaman Upload produk." class="lg:col-span-2" />

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** Baris tagihan / pembayaran / refund per pesanan (DP & pelunasan = 2 baris, 1 order). */
 class Payment extends Model
@@ -12,12 +13,12 @@ class Payment extends Model
 
     protected $fillable = [
         'customer_order_id', 'payment_type', 'amount', 'payment_method', 'midtrans_order_id',
-        'midtrans_transaction_id', 'refund_method', 'refund_proof', 'payment_status', 'paid_at',
+        'midtrans_transaction_id', 'snap_token', 'snap_token_expires_at', 'refund_method', 'refund_proof', 'payment_status', 'paid_at',
     ];
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'paid_at' => 'datetime'];
+        return ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'snap_token' => 'encrypted', 'snap_token_expires_at' => 'datetime'];
     }
 
     public const TYPE_LABELS = ['dp' => 'DP', 'settlement' => 'Pelunasan', 'full' => 'Bayar penuh', 'refund' => 'Refund'];
@@ -30,6 +31,11 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(CustomerOrder::class, 'customer_order_id');
+    }
+
+    public function refundBankAccount(): HasOne
+    {
+        return $this->hasOne(RefundBankAccount::class, 'payment_id');
     }
 
     public function getTypeLabelAttribute(): string

@@ -58,11 +58,31 @@ class AutomationService
                 if ($this->polls->announceOpening($poll)) $log['poll_opened']++;
             });
 
+        // PO hasil voting yang sudah benar-benar terbuka, sekali per batch.
+        PoBatch::where('batch_status', 'open')->whereNull('vote_po_announced_at')->where('opens_at', '<=', now())->where('closes_at', '>=', now())
+            ->whereHas('product', fn ($q) => $q->visible()->whereNotNull('design_option_id'))
+            ->chunkById(100, function ($batches) {
+                foreach ($batches as $batch) $this->polls->announceOpenPo($batch);
+            });
+
+        // Pengingat sekali per estimasi, ketika bulan estimasi tiba.
+        PoBatch::whereIn('batch_status', ['open', 'closed', 'in_production'])
+            ->whereNotNull('estimated_month')->whereDate('estimated_month', '<=', today())
+            ->where(function ($q) { $q->whereNull('estimate_reminded_for')->orWhereColumn('estimate_reminded_for', '!=', 'estimated_month'); })
+            ->chunkById(100, function ($batches) {
+                foreach ($batches as $batch) $this->po->remindEstimate($batch);
+            });
+
         // 3) voting berakhir
         DesignPoll::where('poll_status', 'running')->where('end_date', '<', now())->get()->each(function (DesignPoll $poll) use (&$log) {
             $this->polls->finish($poll);
             $log['polls']++;
         });
+
+        // Custom yang melewati estimasi: penanda dan notifikasi sekali per kejadian.
+        CustomerOrder::where('order_type', 'custom')->whereIn('order_status', ['paid', 'awaiting_production', 'in_production'])
+            ->whereNotNull('custom_estimate_at')->where('custom_estimate_at', '<=', now())->whereNull('custom_late_at')
+            ->chunkById(100, fn ($orders) => $orders->each(fn ($o) => app(CustomDelayService::class)->markLate($o)));
 
         // 4) pelunasan
         CustomerOrder::where('order_status', 'awaiting_settlement')->whereNotNull('settlement_deadline')->get()->each(function (CustomerOrder $o) use (&$log) {
@@ -133,7 +153,7 @@ class AutomationService
                 "Sisa pembayaran {$o->order_code} " . Money::rp($rest) . ' jatuh tempo ' . $deadline->translatedFormat('d M Y H:i') . '. Lewat tenggat, pesanan gagal dan DP hangus.', $o);
         } else {
             $this->notify->send($o->artistProfile->user_id, 'order', "Pengingat kirim pesanan (H-{$daysLeft})",
-                "{$o->order_code} wajib dikirim paling lambat " . $deadline->translatedFormat('d M Y H:i') . '. Lewat tenggat, pesanan batal otomatis dan dana dikembalikan ke pembeli.', $o);
+                "{$o->order_code} wajib dikirim paling lambat " . $deadline->translatedFormat('d M Y H:i') . '. Lewat tenggat, pesanan batal otomatis dan refund pembeli diproses.', $o);
         }
 
         return true;
@@ -174,6 +194,8 @@ class AutomationService
             if (! in_array($o->order_status, CustomerOrder::ACTIVE, true) || $o->order_status === 'shipped') {
                 return;
             }
+            // Tenggat kurir wajib diperiksa ulang setelah lock (hindari race dengan pengiriman).
+            if ($o->isCourier() && (! $o->shipping_deadline || now()->lt($o->shipping_deadline) || ! $this->orders->isReadyToShip($o))) return;
 
             $o->update(['order_status' => 'cancelled']);
             // pengajuan pembatalan pembeli yang masih terbuka ikut ditutup
@@ -191,8 +213,8 @@ class AutomationService
             $o->customRequest?->update(['request_status' => 'cancelled']);
             $this->ratings->recalcArtist($o->artist_profile_id);
 
-            $this->notify->send($o->artistProfile->user_id, 'cancellation', 'Pesanan batal otomatis', "{$o->order_code} dibatalkan sistem: {$reason} Dana dikembalikan ke pembeli dan rating tokomu terkena penalti.", $o);
-            $this->notify->send($o->buyer_id, 'cancellation', 'Pesanan dibatalkan otomatis', "{$o->order_code} dibatalkan karena artis tidak menyerahkan barang tepat waktu. Dana dikembalikan penuh.", $o);
+            $this->notify->send($o->artistProfile->user_id, 'cancellation', 'Pesanan batal otomatis', "{$o->order_code} dibatalkan sistem: {$reason} Refund pembeli diproses dan rating tokomu terkena penalti.", $o);
+            $this->notify->send($o->buyer_id, 'cancellation', 'Pesanan dibatalkan otomatis', "{$o->order_code} dibatalkan karena artis tidak menyerahkan barang tepat waktu. Refund penuh diproses.", $o);
         });
     }
 

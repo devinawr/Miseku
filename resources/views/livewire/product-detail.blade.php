@@ -78,6 +78,8 @@
                     <span>Belum ada ulasan</span>
                 @endif
                 <span class="text-ink-300">•</span>
+                <span>{{ number_format($this->soldOnline) }} pcs terjual online</span>
+                <span class="text-ink-300">•</span>
                 @if ($product->is_pre_order)
                     <span>Sistem pre-order</span>
                 @else

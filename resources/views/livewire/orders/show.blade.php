@@ -15,6 +15,17 @@
                 <section class="ms-card space-y-3 p-5">
                     <h3 class="font-extrabold text-ink-900">Tindakan</h3>
 
+                    @if ($o->order_type === 'custom' && $o->custom_estimate_at)
+                        <p class="text-sm">Estimasi custom: {{ $o->custom_estimate_at->translatedFormat('d M Y H:i') }}@if ($o->custom_estimate_reason) · Alasan perubahan: {{ $o->custom_estimate_reason }}@endif</p>
+                        @if (app(\App\Services\CustomDelayService::class)->isPending($o))
+                            <div class="space-y-2 rounded-xl bg-amber-50 p-3 text-sm">
+                                <p>Estimasi terlewati. Chat artis, lalu pilih lanjut dengan estimasi baru atau batal tanpa penalti. Refund seluruh pembayaran diproses.</p>
+                                <button type="button" wire:click="continueLateCustom" class="ms-btn-soft w-full">Setuju estimasi baru & lanjut</button>
+                                <button type="button" wire:click="cancelLateCustom" wire:confirm="Batalkan custom terlambat dan proses refund seluruh pembayaran?" class="ms-btn-danger w-full">Batal tanpa penalti</button>
+                            </div>
+                        @endif
+                    @endif
+
                     @if ($pending)
                         <a href="{{ route('payments.show', $pending) }}" class="ms-btn-primary w-full"> {{ $pending->payment_type === 'full' ? $pending->type_label : 'Bayar ' . $pending->type_label }}<x-rupiah :value="$pending->amount" /></a>
                     @elseif ($o->order_status === 'awaiting_settlement')
@@ -40,8 +51,26 @@
                     <a href="{{ route('chat', ['with' => $o->artistProfile->user_id, 'pesanan' => $o->id]) }}" wire:navigate class="ms-btn-ghost w-full"><x-icon name="chat" class="h-5 w-5" /> Chat artis</a>
                 </section>
 
+                @foreach ($o->payments->where('payment_type', 'refund')->where('payment_status', 'pending')->where('refund_method', 'manual_transfer') as $refund)
+                    <section class="ms-card space-y-2 p-5" wire:key="refund-bank-{{ $refund->id }}">
+                        <h3 class="font-extrabold text-ink-900">Rekening refund <x-rupiah :value="$refund->amount" /></h3>
+                        @if ($refund->refundBankAccount)
+                            <p class="ms-hint">Rekening {{ $refund->refundBankAccount->bank_name }} {{ $refund->refundBankAccount->masked_account }} sudah dikirim. Jika salah, hubungi admin. Refund masih diproses manual.</p>
+                        @else
+                            <p class="ms-hint">Isi rekening penerima untuk refund manual. Pastikan benar; setelah dikirim hubungi admin jika perlu koreksi.</p>
+                            <input wire:model="refundBank.{{ $refund->id }}" class="ms-input" placeholder="Nama bank" maxlength="100">
+                            @error('refundBank.' . $refund->id)<p class="ms-error">{{ $message }}</p>@enderror
+                            <input wire:model="refundAccountName.{{ $refund->id }}" class="ms-input" placeholder="Nama pemilik rekening" maxlength="100">
+                            @error('refundAccountName.' . $refund->id)<p class="ms-error">{{ $message }}</p>@enderror
+                            <input wire:model="refundAccountNumber.{{ $refund->id }}" class="ms-input" inputmode="numeric" autocomplete="off" placeholder="Nomor rekening (hanya angka)" maxlength="20">
+                            @error('refundAccountNumber.' . $refund->id)<p class="ms-error">{{ $message }}</p>@enderror
+                            <button type="button" wire:click="submitRefundBank({{ $refund->id }})" wire:confirm="Pastikan rekening benar sebelum dikirim. Lanjut?" class="ms-btn-primary w-full">Kirim rekening refund</button>
+                        @endif
+                    </section>
+                @endforeach
+
                 {{-- Pembatalan --}}
-                @if ($o->order_status !== 'awaiting_payment' && ! in_array($o->order_status, ['completed', 'cancelled', 'failed'], true))
+                @if ($o->order_status !== 'awaiting_payment' && ! in_array($o->order_status, ['completed', 'cancelled', 'failed'], true) && ! app(\App\Services\CustomDelayService::class)->isPending($o))
                     <section class="ms-card space-y-3 p-5" x-data="{ open: false }">
                         <div class="flex items-center justify-between">
                             <h3 class="font-extrabold text-ink-900">Ajukan pembatalan</h3>
@@ -52,7 +81,7 @@
                         @else
                             <div x-show="open" x-cloak class="space-y-2">
                                 @if ($cancelProblem)<p class="ms-hint text-amber-700">{{ $cancelProblem }} Pengajuan tetap bisa dikirim, tapi akan ditolak otomatis.</p>@endif
-                                <p class="ms-hint">Disetujui → dana dikembalikan penuh & rating akunmu terkena penalti pembatalan.</p>
+                                <p class="ms-hint">Disetujui → refund penuh diproses & rating akunmu terkena penalti pembatalan.</p>
                                 <textarea wire:model="cancelReason" rows="3" class="ms-input" placeholder="Alasan pembatalan"></textarea>
                                 @error('cancelReason')<p class="ms-error">{{ $message }}</p>@enderror
                                 <button type="button" wire:click="requestCancel" class="ms-btn-danger w-full">Kirim pengajuan</button>

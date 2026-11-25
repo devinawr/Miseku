@@ -72,12 +72,29 @@ class PollService
         });
     }
 
-    /** Dipanggil saat produk PO dari desain pemenang dibuat → kabari pemilih. */
-    public function announcePo(DesignOption $option, \App\Models\Product $product): void
+    /** Kirim saat batch PO hasil voting benar-benar tersedia, satu kali per batch. */
+    public function announceOpenPo(\App\Models\PoBatch $batch): bool
     {
-        $poll = $option->poll()->with('artistProfile')->first();
-
-        DesignVote::where('design_poll_id', $poll->id)->pluck('user_id')->unique()->each(fn ($uid) => $this->notify->send($uid, 'design_poll', 'PO desain pemenang dibuka',
-            "{$poll->artistProfile->shop_name} membuka PO \"{$product->product_name}\" dari hasil voting \"{$poll->poll_title}\". Ikut PO sebelum ditutup!"));
+        return DB::transaction(function () use ($batch) {
+            $batch = \App\Models\PoBatch::whereKey($batch->id)->lockForUpdate()->with('product.artistProfile')->firstOrFail();
+            $product = $batch->product;
+            if ($batch->vote_po_announced_at || $batch->batch_status !== 'open' || $batch->opens_at->isFuture()
+                || $batch->closes_at->isPast() || ! $product || ! $product->design_option_id || ! $product->isPubliclyVisible()) return false;
+            $option = DesignOption::with('poll.artistProfile')->find($product->design_option_id);
+            $poll = $option?->poll;
+            if (! $poll || $poll->poll_status !== 'completed') return false;
+            $ids = DesignVote::where('design_poll_id', $poll->id)->pluck('user_id');
+            if ($poll->fandom_id) {
+                $ids = $ids->merge(DB::table('favorite_fandom')->where('fandom_id', $poll->fandom_id)->pluck('user_id'))
+                    ->merge(DB::table('fandom_member')->where('fandom_id', $poll->fandom_id)->pluck('user_id'));
+            }
+            $ids = $ids->unique()->reject(fn ($id) => (int) $id === (int) $poll->artistProfile->user_id);
+            User::whereIn('id', $ids)->where('is_active', true)->orderBy('id')->chunkById(200, function ($users) use ($product, $poll) {
+                foreach ($users as $user) $this->notify->send($user, 'design_poll', 'PO hasil voting dibuka',
+                    "{$product->artistProfile->shop_name} membuka PO \"{$product->product_name}\" dari voting \"{$poll->poll_title}\". Ikut PO sebelum ditutup!", null, false);
+            });
+            $batch->update(['vote_po_announced_at' => now()]);
+            return true;
+        });
     }
 }

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Product;
 use App\Models\ProductView;
+use App\Models\OrderItem;
 use App\Services\CartService;
 use App\Services\ContentBasedRecommender;
 use Illuminate\Support\Facades\Auth;
@@ -78,6 +79,17 @@ class ProductDetail extends Component
     public function isOwnProduct(): bool
     {
         return Auth::check() && $this->product->artistProfile?->user_id === Auth::id();
+    }
+
+    /** Jumlah pcs pesanan online selesai, selain pesanan refund/retur disetujui. */
+    #[Computed]
+    public function soldOnline(): int
+    {
+        return (int) OrderItem::where('product_id', $this->product->id)->whereHas('order', fn ($q) => $q
+            ->where('order_status', 'completed')->where('order_type', '!=', 'ots_event')
+            ->whereDoesntHave('returns', fn ($r) => $r->whereIn('return_status', ['approved', 'completed']))
+            ->whereDoesntHave('payments', fn ($r) => $r->where('payment_type', 'refund')->whereIn('payment_status', ['pending', 'success'])))
+            ->sum('quantity');
     }
 
     #[Computed]

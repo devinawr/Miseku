@@ -4,6 +4,23 @@
         <select wire:model.live="role" class="ms-select w-40"><option value="">Semua peran</option><option value="buyer">Pembeli</option><option value="artist">Artis</option><option value="admin">Admin</option></select>
         <input type="search" wire:model.live.debounce.300ms="q" class="ms-input w-64" placeholder="Cari nama / email…">
     </x-page-title>
+    @if ($applications->isNotEmpty())
+        <h2 class="ms-section-title mb-3">Pengajuan toko menunggu pemeriksaan</h2>
+        <div class="mb-6 space-y-3">
+            @foreach ($applications as $a)
+                <div class="ms-card space-y-2 p-5" wire:key="application-{{ $a->id }}">
+                    <p class="font-bold">{{ $a->shop_name }} · {{ $a->user->name }} ({{ $a->user->email }})</p>
+                    <p class="text-sm">{{ $a->shop_description }} · {{ $a->shop_address }}</p>
+                    <p class="text-sm">Akun sosial: <a href="{{ $a->social_url }}" target="_blank" rel="noopener noreferrer" class="ms-link">{{ $a->social_url }}</a></p>
+                    <p class="text-xs text-amber-700">Periksa kepemilikan akun secara terpisah; tautan saja belum membuktikan identitas.</p>
+                    <input wire:model="applicationNotes.{{ $a->id }}" class="ms-input" placeholder="Alasan penolakan (wajib jika ditolak)">
+                    @error('applicationNotes.' . $a->id)<p class="ms-error">{{ $message }}</p>@enderror
+                    <button type="button" wire:click="decideApplication({{ $a->id }}, true)" wire:confirm="Identitas artis sudah diperiksa?" class="ms-btn-primary">Setujui toko</button>
+                    <button type="button" wire:click="decideApplication({{ $a->id }}, false)" class="ms-btn-ghost">Tolak</button>
+                </div>
+            @endforeach
+        </div>
+    @endif
     <div class="ms-card overflow-x-auto">
         <table class="w-full min-w-[760px] text-sm">
             <thead class="bg-ink-50 text-left text-xs font-bold text-ink-500 uppercase"><tr><th class="px-4 py-3">Nama</th><th class="px-4 py-3">Peran</th><th class="px-4 py-3">Rating</th><th class="px-4 py-3">Pesanan</th><th class="px-4 py-3">Status</th><th></th></tr></thead>

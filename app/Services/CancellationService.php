@@ -47,6 +47,7 @@ class CancellationService
     public function request(CustomerOrder $order, User $buyer, string $reason): Cancellation
     {
         Fail::unless($order->buyer_id === $buyer->id, 'Bukan pesananmu.');
+        Fail::unless(! app(CustomDelayService::class)->isPending($order->fresh()), 'Untuk custom terlambat gunakan tombol batal tanpa penalti.');
         Fail::unless($order->order_status !== 'awaiting_payment', 'Pesanan belum dibayar — cukup tekan "Batalkan pesanan".');
         Fail::unless(! $this->openCase($order), 'Sudah ada pengajuan pembatalan yang sedang diproses.');
 
@@ -89,6 +90,7 @@ class CancellationService
     public function approve(Cancellation $case, User $artist, ?string $response = null): void
     {
         $order = $case->order;
+        Fail::unless(! app(CustomDelayService::class)->isPending($order->fresh()), 'Custom terlambat: pembeli dapat membatalkan tanpa penalti.');
         Fail::unless($order->artistProfile->user_id === $artist->id, 'Bukan pesanan tokomu.');
         Fail::unless(in_array($case->cancellation_status, ['submitted', 'in_discussion'], true), 'Pengajuan ini sudah diputuskan.');
         Fail::unless($this->eligibility($order) === null, 'Status pesanan sudah berubah, pembatalan tidak bisa disetujui lagi.');
@@ -112,6 +114,7 @@ class CancellationService
     /** Artis membatalkan sendiri (mis. tidak sanggup memenuhi) → langsung disetujui, penalti ke artis. */
     public function cancelByArtist(CustomerOrder $order, User $artist, string $reason): void
     {
+        Fail::unless(! app(CustomDelayService::class)->isPending($order->fresh()), 'Custom terlambat: minta pembeli memilih lanjut atau batal tanpa penalti.');
         Fail::unless($order->artistProfile->user_id === $artist->id, 'Bukan pesanan tokomu.');
         Fail::unless(in_array($order->order_status, ['paid', 'awaiting_production', 'in_production', 'production_completed', 'awaiting_settlement'], true),
             'Pesanan yang sudah dikirim/diambil/selesai tidak bisa dibatalkan.');
@@ -129,6 +132,8 @@ class CancellationService
     private function executeCancel(CustomerOrder $order, string $label, Cancellation $case): void
     {
         $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+        Fail::unless(! in_array($order->order_status, ['cancelled', 'failed', 'completed', 'shipped', 'ready_for_pickup'], true), 'Status pesanan telah berubah.');
+        Fail::unless(! app(CustomDelayService::class)->isPending($order), 'Custom terlambat: pembeli dapat membatalkan tanpa penalti.');
         $order->update(['order_status' => 'cancelled']);
         $this->orders->restoreStock($order);
         $order->customRequest?->update(['request_status' => 'cancelled']);
@@ -142,7 +147,7 @@ class CancellationService
             $this->ratings->recalcBuyer($order->buyer_id);
         }
 
-        $this->notify->send($order->buyer_id, 'cancellation', 'Pesanan dibatalkan', "{$order->order_code} dibatalkan ({$label}). " . ($refund['total'] > 0 ? 'Dana yang sudah dibayar dikembalikan.' : ''), $order);
-        $this->notify->send($order->artistProfile->user_id, 'cancellation', 'Pesanan dibatalkan', "{$order->order_code} dibatalkan ({$label}). Dana tertahan dikembalikan ke pembeli.", $order);
+        $this->notify->send($order->buyer_id, 'cancellation', 'Pesanan dibatalkan', "{$order->order_code} dibatalkan ({$label}). " . ($refund['total'] > 0 ? 'Refund dana yang sudah dibayar diproses.' : ''), $order);
+        $this->notify->send($order->artistProfile->user_id, 'cancellation', 'Pesanan dibatalkan', "{$order->order_code} dibatalkan ({$label}). Refund dana tertahan diproses.", $order);
     }
 }

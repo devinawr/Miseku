@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <x-studio-nav />
-    <x-page-title title="Penjualan OTS di booth" subtitle="Catat penjualan langsung saat event. Stok ready stock berkurang; uang tunai/QRIS pribadi tidak masuk saldo Miseku. Metode bayar hanya catatan manual, bukan pembayaran yang diverifikasi sistem." />
+    <x-page-title title="Penjualan OTS di booth" subtitle="Stok asli ready stock berkurang dan dicatat menurut produk dan event. Tidak membuat pesanan atau pembayaran." />
 
     @if ($booths->isEmpty())
         <x-empty-state icon="ticket" title="Tidak ada event yang sedang berlangsung" description="Penjualan OTS hanya bisa saat event berlangsung dan kamu terdaftar punya booth.">
@@ -26,25 +26,28 @@
                 </ul>
             </section>
             <aside class="ms-card space-y-3 p-5 lg:col-span-4">
-                <p class="text-sm text-ink-500">Total</p>
-                <p class="text-3xl font-extrabold text-ink-900"><x-rupiah :value="$total" /></p>
-                <label class="block"><span class="ms-label">Metode bayar</span>
-                    <select wire:model="method" class="ms-select"><option>Tunai</option><option>QRIS pribadi artis</option><option>Transfer</option></select>
-                </label>
-                <button type="button" wire:click="sell" class="ms-btn-primary w-full" @disabled($total <= 0)>Catat penjualan</button>
+                <p class="text-sm text-ink-500">Total pengurangan</p>
+                <p class="text-3xl font-extrabold text-ink-900">{{ $total }} pcs</p>
+                <button type="button" wire:click="sell" wire:confirm="Kurangi stok asli produk yang dipilih?" class="ms-btn-primary w-full" @disabled($total <= 0)>Catat pengurangan stok</button>
             </aside>
         </div>
     @endif
 
     <h2 class="ms-section-title mt-8 mb-3">Riwayat OTS</h2>
     <div class="ms-card divide-y divide-ink-100">
+        @foreach ($stockLogs as $log)
+            <div class="flex flex-wrap justify-between gap-2 px-5 py-3 text-sm" wire:key="stock-log-{{ $log->id }}">
+                <span><b>{{ $log->quantity }}× {{ $log->product_name }}</b> · {{ $log->event_name }} @if($log->booth_name) · Booth {{ $log->booth_name }} @endif</span>
+                <span>{{ $log->created_at->translatedFormat('d M Y H:i') }}</span>
+            </div>
+        @endforeach
         @forelse ($sales as $s)
             <div class="flex flex-wrap justify-between gap-2 px-5 py-3 text-sm" wire:key="sale-{{ $s->id }}">
                 <span><b class="font-mono">{{ $s->order_code }}</b> · {{ $s->items->map(fn ($i) => $i->quantity . '× ' . $i->product?->product_name)->implode(', ') }}</span>
                 <span class="font-bold"><x-rupiah :value="$s->total_amount" /> <span class="font-normal text-ink-500">· {{ $s->created_at->translatedFormat('d M H:i') }}</span></span>
             </div>
         @empty
-            <p class="px-5 py-6 text-center text-sm text-ink-500">Belum ada penjualan OTS.</p>
+            @if ($stockLogs->isEmpty()) <p class="px-5 py-6 text-center text-sm text-ink-500">Belum ada penjualan OTS.</p> @endif
         @endforelse
     </div>
 </div>

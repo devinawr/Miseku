@@ -65,12 +65,46 @@ class PoService
                 foreach ($this->ordersOf($batch)->where('order_status', 'paid') as $o) {
                     $o->update(['order_status' => 'cancelled']);
                     $this->refunds->refundOrder($o, 'PO tidak mencapai minimum produksi');
-                    $this->notify->send($o->buyer_id, 'order', 'PO dibatalkan — target tidak tercapai', "PO {$product->product_name} hanya {$total}/{$batch->min_order} pcs. Pesanan {$o->order_code} dibatalkan dan dana dikembalikan otomatis.", $o);
+                    $this->notify->send($o->buyer_id, 'order', 'PO dibatalkan — target tidak tercapai', "PO {$product->product_name} hanya {$total}/{$batch->min_order} pcs. Pesanan {$o->order_code} dibatalkan dan refund diproses.", $o);
                 }
-                $this->notify->send($product->artistProfile->user_id, 'order', 'PO tidak mencapai target', "PO {$product->product_name} hanya {$total}/{$batch->min_order} pcs — batch dibatalkan dan semua pembeli direfund otomatis.");
+                $this->notify->send($product->artistProfile->user_id, 'order', 'PO tidak mencapai target', "PO {$product->product_name} hanya {$total}/{$batch->min_order} pcs — batch dibatalkan dan semua refund pembeli diproses.");
             }
 
             return ['reached' => $reached, 'total' => $total];
+        });
+    }
+
+    /** Ubah bulan estimasi dengan alasan dan beri tahu pembeli yang pesanannya masih aktif. */
+    public function changeEstimate(PoBatch $batch, string $month, string $reason): void
+    {
+        $reason = trim($reason);
+        Fail::unless(mb_strlen($reason) >= 10 && mb_strlen($reason) <= 1000, 'Alasan wajib diisi 10–1000 karakter.');
+        try { $newDate = \Illuminate\Support\Carbon::createFromFormat('!Y-m', $month); }
+        catch (\Throwable $e) { Fail::because('Bulan estimasi tidak valid.'); }
+        Fail::unless($newDate && $newDate->format('Y-m') === $month && $newDate->gte(today()->startOfMonth()), 'Estimasi tidak boleh di bulan yang sudah lewat.');
+        DB::transaction(function () use ($batch, $newDate, $reason) {
+            $batch = PoBatch::whereKey($batch->id)->lockForUpdate()->with('product')->firstOrFail();
+            Fail::unless(in_array($batch->batch_status, ['open', 'closed', 'in_production'], true), 'Estimasi batch ini tidak dapat diubah.');
+            Fail::unless(! $batch->estimated_month || $batch->estimated_month->format('Y-m') !== $newDate->format('Y-m'), 'Bulan estimasi belum berubah.');
+            $old = $batch->estimated_month?->translatedFormat('F Y') ?: '-';
+            $batch->update(['estimated_month' => $newDate->toDateString(), 'estimate_change_reason' => $reason, 'estimate_reminded_for' => null]);
+            foreach ($this->ordersOf($batch)->whereNotIn('order_status', ['cancelled', 'failed', 'completed']) as $order) {
+                $this->notify->send($order->buyer_id, 'order', 'Estimasi PO berubah', "Estimasi {$batch->product->product_name} berubah dari {$old} menjadi " . $newDate->translatedFormat('F Y') . ". Alasan: {$reason}", $order);
+            }
+        });
+    }
+
+    /** Ingatkan artis sekali saat bulan estimasi tiba; perubahan bulan mengaktifkan pengingat baru. */
+    public function remindEstimate(PoBatch $batch): bool
+    {
+        return DB::transaction(function () use ($batch) {
+            $batch = PoBatch::whereKey($batch->id)->lockForUpdate()->with('product.artistProfile')->firstOrFail();
+            if (! in_array($batch->batch_status, ['open', 'closed', 'in_production'], true) || ! $batch->estimated_month
+                || $batch->estimated_month->isFuture() || ($batch->estimate_reminded_for && $batch->estimate_reminded_for->isSameDay($batch->estimated_month))) return false;
+            $this->notify->send($batch->product->artistProfile->user_id, 'order', 'Bulan estimasi PO telah tiba',
+                "Estimasi {$batch->product->product_name} sudah tiba. Perbarui status produksi atau ubah estimasi dengan alasan di Batch PO.");
+            $batch->update(['estimate_reminded_for' => $batch->estimated_month->toDateString()]);
+            return true;
         });
     }
 

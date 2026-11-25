@@ -60,6 +60,13 @@
                         <div class="min-w-0 flex-1">
                             <p><b><x-rupiah :value="$r->amount" /></b> ke {{ $r->order?->buyer?->name }} ({{ $r->order?->buyer?->email }}) · <a href="{{ route('orders.show', $r->order) }}" wire:navigate class="ms-link font-mono text-xs">{{ $r->order?->order_code }}</a></p>
                             <p class="text-xs text-ink-500">{{ $r->refund_method === 'manual_transfer' ? 'Transfer manual' : 'Midtrans API' }} · {{ $r->created_at->translatedFormat('d M Y H:i') }} · {{ $r->status_label }}</p>
+                            @if ($r->payment_status === 'pending' && $r->refund_method === 'manual_transfer')
+                                @if ($r->refundBankAccount)
+                                    <p class="text-xs text-ink-700">Rekening yang diberikan pembeli: {{ $r->refundBankAccount->bank_name }} · {{ $r->refundBankAccount->account_number }} · a.n. {{ $r->refundBankAccount->account_name }}. Verifikasi sebelum transfer.</p>
+                                @else
+                                    <p class="text-xs text-amber-700">Pembeli belum mengisi rekening refund.</p>
+                                @endif
+                            @endif
                             @if ($r->refund_proof)<a href="{{ $r->refund_proof }}" target="_blank" class="ms-link text-xs">Bukti transfer</a>@endif
                         </div>
                         @if ($r->payment_status === 'pending')

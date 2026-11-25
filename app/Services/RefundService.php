@@ -74,8 +74,8 @@ class RefundService
             }
 
             if ($total > 0) {
-                $this->notify->send($order->buyer_id, 'payment', 'Dana dikembalikan', "Refund " . Money::rp($total) . " untuk {$order->order_code} ({$reason}). "
-                    . ($manual ? 'Refund dikirim manual oleh admin ke rekening/e-wallet-mu — admin akan menghubungimu.' : 'Dana kembali ke metode pembayaran semula.'), $order);
+                $this->notify->send($order->buyer_id, 'payment', 'Refund diproses', "Refund " . Money::rp($total) . " untuk {$order->order_code} ({$reason}). "
+                    . ($manual ? 'Menunggu transfer manual admin; admin akan menghubungimu. Lihat status refund di detail pesanan.' : 'Permintaan refund diproses melalui metode yang tersedia. Lihat statusnya di detail pesanan.'), $order);
             }
 
             return ['total' => $total, 'manual' => $manual];

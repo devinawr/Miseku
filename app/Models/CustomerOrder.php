@@ -25,7 +25,7 @@ class CustomerOrder extends Model
         'order_code', 'buyer_id', 'artist_profile_id', 'address_id', 'event_booth_id', 'custom_request_id',
         'order_type', 'shipping_method', 'payment_scheme', 'product_subtotal', 'shipping_cost', 'admin_fee',
         'total_amount', 'order_status', 'courier', 'tracking_number', 'settlement_deadline',
-        'settlement_reminder_stage', 'shipping_deadline', 'shipping_reminder_stage', 'delivered_at', 'auto_complete_hold', 'completed_at', 'created_at',
+        'settlement_reminder_stage', 'shipping_deadline', 'shipping_reminder_stage', 'custom_estimate_at', 'custom_estimate_reason', 'custom_late_at', 'delivered_at', 'auto_complete_hold', 'completed_at', 'created_at',
     ];
 
     protected function casts(): array
@@ -37,6 +37,8 @@ class CustomerOrder extends Model
             'total_amount'              => 'decimal:2',
             'settlement_deadline'       => 'datetime',
             'shipping_deadline'         => 'datetime',
+            'custom_estimate_at'        => 'datetime',
+            'custom_late_at'            => 'datetime',
             'settlement_reminder_stage' => 'integer',
             'shipping_reminder_stage'   => 'integer',
             'delivered_at'              => 'datetime',
@@ -45,6 +47,21 @@ class CustomerOrder extends Model
             'created_at'                => 'datetime',
             'updated_at'                => 'datetime',
         ];
+    }
+
+    /** Tautan resmi kurir; nomor resi tidak dikirim otomatis ke pihak ketiga. */
+    public function getTrackingUrlAttribute(): ?string
+    {
+        if (! $this->tracking_number) return null;
+        $courier = mb_strtolower(trim((string) $this->courier));
+        return match (true) {
+            str_starts_with($courier, 'jne') => 'https://jne.co.id/tracking-package',
+            str_starts_with($courier, 'pos') => 'https://www.posindonesia.co.id/id/tracking',
+            str_starts_with($courier, 'tiki') => 'https://www.tiki.id/id/track',
+            str_starts_with($courier, 'sicepat') => 'https://www.sicepat.com/',
+            str_starts_with($courier, 'j&t'), str_starts_with($courier, 'jnt') => 'https://www.jet.co.id/',
+            default => null,
+        };
     }
 
     public const STATUS_LABELS = [

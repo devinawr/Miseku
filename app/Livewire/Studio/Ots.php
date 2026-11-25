@@ -6,6 +6,7 @@ use App\Livewire\Concerns\RunsActions;
 use App\Models\CustomerOrder;
 use App\Models\EventBooth;
 use App\Models\Product;
+use App\Models\OtsStockLog;
 use App\Services\OtsService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -14,7 +15,7 @@ use Livewire\Component;
 
 /**
  * Penjualan on-the-spot di booth (BPMN 5). Stok produk ready stock berkurang,
- * pesanan dicatat atas nama "Pembeli Umum (Event)", uang tunai dipegang artis (tidak masuk saldo).
+ * disertai riwayat stok, tanpa membuat pesanan atau pembayaran.
  */
 #[Layout('components.layouts.app')]
 #[Title('Penjualan OTS')]
@@ -27,7 +28,6 @@ class Ots extends Component
     /** product_id => qty */
     public array $qty = [];
 
-    public string $method = 'Tunai';
 
     public function mount(): void
     {
@@ -49,10 +49,10 @@ class Ots extends Component
             return;
         }
 
-        $order = $this->attempt(fn () => app(OtsService::class)->sell(Auth::user()->artistProfile, $booth, $this->qty, $this->method));
-        if ($order) {
+        $count = $this->attempt(fn () => app(OtsService::class)->sell(Auth::user()->artistProfile, $booth, $this->qty));
+        if ($count) {
             $this->qty = [];
-            $this->dispatch('toast', message: "Terjual — {$order->order_code} (" . \App\Support\Money::rp($order->total_amount) . ').');
+            $this->dispatch('toast', message: "Stok berkurang {$count} pcs dan tercatat di riwayat OTS.");
         }
     }
 
@@ -61,12 +61,13 @@ class Ots extends Component
         $profileId = Auth::user()->artistProfile->id;
         $products = Product::with('primaryImage')->where('artist_profile_id', $profileId)->where('availability_type', 'ready_stock')
             ->where('product_status', '!=', 'deleted')->orderBy('product_name')->get();
-        $total = collect($this->qty)->sum(fn ($q, $id) => (int) $q * (float) ($products->firstWhere('id', (int) $id)?->price ?? 0));
+        $total = collect($this->qty)->sum(fn ($q) => max(0, (int) $q));
 
         return view('livewire.studio.ots', [
             'booths'   => $this->booths(),
             'products' => $products,
             'total'    => $total,
+            'stockLogs' => OtsStockLog::where('artist_profile_id', $profileId)->latest('id')->take(30)->get(),
             'sales'    => CustomerOrder::with('items.product', 'booth.event')->where('artist_profile_id', $profileId)->where('order_type', 'ots_event')->latest('id')->take(15)->get(),
         ]);
     }

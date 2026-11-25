@@ -85,6 +85,11 @@
             <p class="text-ink-600">{{ $o->address->one_line }}</p>
         @endif
         <p class="mt-2 text-ink-600">Kurir: <b>{{ $o->courier ?: '-' }}</b> @if ($o->tracking_number) · Resi <b class="font-mono">{{ $o->tracking_number }}</b>@endif</p>
+        @if ($o->tracking_number)
+            <p class="mt-1 text-ink-500">Salin nomor resi dan cek langsung di situs kurir.
+                @if ($o->tracking_url) <a href="{{ $o->tracking_url }}" target="_blank" rel="noopener noreferrer" class="ms-link">Buka situs resmi kurir</a> @endif
+            </p>
+        @endif
         @if ($o->shipping_deadline && in_array($o->order_status, ['paid', 'production_completed'], true))
             <p class="mt-1 text-amber-700">Batas artis mengirim: {{ $o->shipping_deadline->translatedFormat('d M Y H:i') }}</p>
         @endif

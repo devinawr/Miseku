@@ -30,6 +30,10 @@ class Show extends Component
 
     public string $returnReason = '';
 
+    public array $refundBank = [];
+    public array $refundAccountName = [];
+    public array $refundAccountNumber = [];
+
     public array $returnPhotos = [];
 
     public int $shopRating = 5;
@@ -82,6 +86,34 @@ class Show extends Component
             $this->dispatch('toast', message: $case->cancellation_status === 'rejected' ? 'Pengajuan ditolak otomatis: ' . $case->artist_response : 'Pengajuan pembatalan dikirim ke artis.', tone: $case->cancellation_status === 'rejected' ? 'error' : 'ok');
             $this->cancelReason = '';
         }
+        $this->reload();
+    }
+
+    public function continueLateCustom(): void
+    {
+        abort_unless($this->mine(), 403);
+        $this->attempt(fn () => app(\App\Services\CustomDelayService::class)->accept($this->order, Auth::user()), 'Estimasi baru disetujui.');
+        $this->reload();
+    }
+
+    public function cancelLateCustom(): void
+    {
+        abort_unless($this->mine(), 403);
+        $this->attempt(fn () => app(\App\Services\CustomDelayService::class)->cancel($this->order, Auth::user()), 'Dibatalkan tanpa penalti. Refund diproses.');
+        $this->reload();
+    }
+
+    public function submitRefundBank(int $id): void
+    {
+        abort_unless($this->mine(), 403);
+        $this->validate([
+            "refundBank.$id" => 'required|string|min:2|max:100',
+            "refundAccountName.$id" => 'required|string|min:2|max:100',
+            "refundAccountNumber.$id" => ['required', 'string', 'regex:/^[0-9]{6,20}$/'],
+        ]);
+        $payment = $this->order->payments()->findOrFail($id);
+        $saved = $this->attempt(fn () => app(\App\Services\RefundBankAccountService::class)->submit($payment, Auth::user(), $this->refundBank[$id], $this->refundAccountName[$id], $this->refundAccountNumber[$id]), 'Rekening refund dikirim ke admin.');
+        if ($saved) { unset($this->refundBank[$id], $this->refundAccountName[$id], $this->refundAccountNumber[$id]); }
         $this->reload();
     }
 
@@ -154,7 +186,7 @@ class Show extends Component
     {
         $o = $this->order->load([
             'items.product.primaryImage', 'items.batch', 'artistProfile.user', 'address', 'booth.event', 'customRequest.merchandiseType',
-            'payments' => fn ($q) => $q->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews.photos', 'productReviews.photos',
+            'payments' => fn ($q) => $q->with('refundBankAccount')->orderBy('id'), 'pickup', 'cancellations.requester', 'returns.photos', 'reviews.photos', 'productReviews.photos',
         ]);
 
         $returns = app(ReturnService::class);

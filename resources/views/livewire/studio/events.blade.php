@@ -2,6 +2,21 @@
     <x-studio-nav />
     <x-page-title title="Event & booth" subtitle="Daftarkan booth di event (dibuat admin) agar pembeli bisa memilih ambil di booth, lalu jual OTS & scan QR saat event berlangsung." />
 
+    <div class="mb-5">
+        <button type="button" wire:click="$toggle('showProposal')" class="ms-btn-ghost">Usulkan event baru</button>
+        @if ($showProposal)
+            <form wire:submit="proposeEvent" class="ms-card mt-3 grid gap-3 p-5 md:grid-cols-2">
+                <label><span class="ms-label">Nama event</span><input wire:model="proposalName" class="ms-input">@error('proposalName')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                <label><span class="ms-label">Lokasi</span><input wire:model="proposalLocation" class="ms-input">@error('proposalLocation')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                <label><span class="ms-label">Tanggal mulai</span><input type="date" wire:model="proposalStart" class="ms-input">@error('proposalStart')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                <label><span class="ms-label">Tanggal selesai</span><input type="date" wire:model="proposalEnd" class="ms-input">@error('proposalEnd')<p class="ms-error">{{ $message }}</p>@enderror</label>
+                <button class="ms-btn-primary" type="submit">Kirim ke admin</button>
+            </form>
+        @endif
+        @foreach ($proposals as $proposal)
+            <p class="mt-2 text-sm">{{ $proposal->event_name }} · {{ ['pending'=>'Menunggu admin', 'approved'=>'Disetujui', 'rejected'=>'Ditolak'][$proposal->status] ?? $proposal->status }} @if($proposal->review_note) · {{ $proposal->review_note }} @endif</p>
+        @endforeach
+    </div>
     <div class="grid gap-4 lg:grid-cols-2">
         @forelse ($events as $e)
             @php $booth = $booths->get($e->id); $past = $e->end_date->lt(today()); @endphp

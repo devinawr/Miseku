@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\CustomerOrder;
 use App\Models\Payment;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -49,10 +49,13 @@ class MidtransGateway
         return Http::withBasicAuth((string) config('services.midtrans.server_key'), '')->acceptJson()->timeout(20);
     }
 
-    /** Token Snap untuk satu tagihan. Disimpan di cache agar tidak membuat transaksi ganda. */
+    /** Token Snap disimpan terenkripsi di database; server key tetap hanya di konfigurasi. */
     public function snapToken(Payment $payment): ?string
     {
-        return Cache::remember('snap_' . $payment->midtrans_order_id, now()->addHours((int) config('miseku.payment_expiry_hours', 24)), function () use ($payment) {
+        return DB::transaction(function () use ($payment) {
+            $payment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            if ($payment->payment_status !== 'pending') return null;
+            if ($payment->snap_token && $payment->snap_token_expires_at?->isFuture()) return $payment->snap_token;
             /** @var CustomerOrder $order */
             $order = $payment->order()->with('buyer')->first();
 
@@ -76,7 +79,10 @@ class MidtransGateway
                 return null;
             }
 
-            return $res->json('token');
+            $token = $res->json('token');
+            if (! is_string($token) || $token === '') return null;
+            $payment->update(['snap_token' => $token, 'snap_token_expires_at' => now()->addHours((int) config('miseku.payment_expiry_hours', 24))]);
+            return $token;
         });
     }
 

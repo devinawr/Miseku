@@ -12,7 +12,7 @@ class PoBatch extends Model
 
     protected $fillable = [
         'product_id', 'price_po', 'payment_scheme', 'dp_amount', 'min_order',
-        'max_slot', 'opens_at', 'closes_at', 'estimated_month', 'batch_status', 'completed_at', 'created_at',
+        'max_slot', 'opens_at', 'closes_at', 'estimated_month', 'estimate_change_reason', 'estimate_reminded_for', 'vote_po_announced_at', 'batch_status', 'completed_at', 'created_at',
     ];
 
     protected function casts(): array
@@ -23,6 +23,8 @@ class PoBatch extends Model
             'opens_at'        => 'datetime',
             'closes_at'       => 'datetime',
             'estimated_month' => 'date',
+            'estimate_reminded_for' => 'date',
+            'vote_po_announced_at' => 'datetime',
             'completed_at'    => 'datetime',
             'created_at'      => 'datetime',
             'updated_at'      => 'datetime',

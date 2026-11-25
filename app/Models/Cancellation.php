@@ -11,7 +11,7 @@ class Cancellation extends Model
     protected $table = 'cancellation';
 
     protected $fillable = [
-        'customer_order_id', 'requester_id', 'cancellation_type', 'reason',
+        'customer_order_id', 'requester_id', 'cancellation_type', 'penalty_exempt', 'reason',
         'cancellation_status', 'artist_response', 'resolved_at',
     ];
 

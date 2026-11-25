@@ -50,11 +50,13 @@ class OrderService
     public function checkout(User $buyer, array $lines, array $shippingByArtist, ?int $addressId, array $cartItemIds = []): Collection
     {
         Fail::unless(count($lines) > 0, 'Belum ada produk yang dipilih untuk checkout.');
+        $ids = collect($lines)->pluck('product_id')->map(fn ($id) => (int) $id);
+        Fail::unless($ids->every(fn ($id) => $id > 0) && $ids->unique()->count() === $ids->count(), 'Produk duplikat atau tidak valid. Muat ulang keranjang.');
 
         return DB::transaction(function () use ($buyer, $lines, $shippingByArtist, $addressId, $cartItemIds) {
             $products = Product::whereIn('id', collect($lines)->pluck('product_id'))
                 ->with(['artistProfile', 'character.fandom', 'merchandiseType'])
-                ->lockForUpdate()->get()->keyBy('id');
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
             // 1) validasi tiap baris + tentukan harga & batch
             $prepared = collect($lines)->map(function (array $line) use ($products, $buyer) {
@@ -64,7 +66,7 @@ class OrderService
                 Fail::unless($p->artistProfile->user_id !== $buyer->id, 'Kamu tidak bisa membeli produk tokomu sendiri.');
 
                 $qty = (int) $line['quantity'];
-                Fail::unless($qty >= 1, 'Jumlah tidak valid.');
+                Fail::unless($qty >= 1 && $qty <= \App\Services\CartService::MAX_PER_ITEM, 'Jumlah tidak valid.');
 
                 $batch = null;
                 if ($p->is_pre_order) {
@@ -296,6 +298,10 @@ class OrderService
         }
 
         $values = ['order_status' => 'paid'];
+        if ($order->order_type === 'custom' && ! $order->custom_estimate_at) {
+            $offer = CustomOffer::where('custom_request_id', $order->custom_request_id)->where('artist_profile_id', $order->artist_profile_id)->where('offer_status', 'selected')->first();
+            if ($offer) $values['custom_estimate_at'] = ($payment->paid_at ?: now())->copy()->addDays((int) $offer->estimated_days);
+        }
         if ($order->order_type === 'ready_stock' && $order->isCourier()) {
             $values['shipping_deadline'] = now()->addDays(config('miseku.shipping_days'));
         }
@@ -322,22 +328,26 @@ class OrderService
     /** Artis memperbarui status produksi: awaiting_production / in_production. */
     public function setProductionStatus(CustomerOrder $order, string $status): void
     {
-        Fail::unless(in_array($status, ['awaiting_production', 'in_production'], true), 'Status tidak dikenal.');
-        Fail::unless(in_array($order->order_type, ['pre_order', 'custom'], true), 'Pesanan ready stock tidak melalui produksi — langsung kirim.');
+        DB::transaction(function () use ($order, $status) {
+            $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            Fail::unless(! app(CustomDelayService::class)->isPending($order), 'Custom terlambat: tunggu keputusan pembeli.');
+            Fail::unless(in_array($status, ['awaiting_production', 'in_production'], true), 'Status tidak dikenal.');
+            Fail::unless(in_array($order->order_type, ['pre_order', 'custom'], true), 'Pesanan ready stock tidak melalui produksi — langsung kirim.');
 
-        $allowed = $status === 'awaiting_production' ? ['paid'] : ['paid', 'awaiting_production'];
-        Fail::unless(in_array($order->order_status, $allowed, true), 'Status pesanan saat ini tidak bisa diubah ke tahap itu.');
+            $allowed = $status === 'awaiting_production' ? ['paid'] : ['paid', 'awaiting_production'];
+            Fail::unless(in_array($order->order_status, $allowed, true), 'Status pesanan saat ini tidak bisa diubah ke tahap itu.');
 
-        if ($order->order_type === 'pre_order') {
-            $batch = $order->load('items.batch')->poBatch();
-            Fail::unless($batch && in_array($batch->batch_status, ['closed', 'in_production'], true),
-                'Produksi PO baru bisa dimulai setelah PO ditutup dan target minimum tercapai (menu Batch PO).');
-        }
+            if ($order->order_type === 'pre_order') {
+                $batch = $order->load('items.batch')->poBatch();
+                Fail::unless($batch && in_array($batch->batch_status, ['closed', 'in_production'], true),
+                    'Produksi PO baru bisa dimulai setelah PO ditutup dan target minimum tercapai (menu Batch PO).');
+            }
 
-        $order->update(['order_status' => $status]);
+            $order->update(['order_status' => $status]);
 
-        $this->notify->send($order->buyer_id, 'order', $status === 'in_production' ? 'Pesanan mulai diproduksi' : 'Pesanan menunggu produksi',
-            "Status {$order->order_code}: " . CustomerOrder::STATUS_LABELS[$status] . '.', $order);
+            $this->notify->send($order->buyer_id, 'order', $status === 'in_production' ? 'Pesanan mulai diproduksi' : 'Pesanan menunggu produksi',
+                "Status {$order->order_code}: " . CustomerOrder::STATUS_LABELS[$status] . '.', $order);
+        });
     }
 
     /** Artis menandai produksi selesai → DP: tagihan pelunasan terbit; full: tenggat kirim mulai. */
@@ -345,6 +355,7 @@ class OrderService
     {
         DB::transaction(function () use ($order) {
             $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->with(['payments', 'items.batch'])->firstOrFail();
+            Fail::unless(! app(CustomDelayService::class)->isPending($order), 'Custom terlambat: tunggu keputusan pembeli.');
             Fail::unless(in_array($order->order_type, ['pre_order', 'custom'], true), 'Pesanan ready stock tidak melalui produksi.');
             Fail::unless(in_array($order->order_status, ['awaiting_production', 'in_production'], true), 'Pesanan belum dalam tahap produksi.');
 
@@ -385,12 +396,14 @@ class OrderService
 
     public function ship(CustomerOrder $order, string $courier, string $tracking): void
     {
-        Fail::unless($order->isCourier(), 'Pesanan ini diambil di booth, bukan dikirim kurir.');
-        Fail::unless($this->isReadyToShip($order), 'Pesanan belum siap dikirim (belum lunas / produksi belum selesai).');
-
-        $order->update(['order_status' => 'shipped', 'courier' => mb_substr($courier, 0, 40), 'tracking_number' => mb_substr($tracking, 0, 60)]);
-
-        $this->notify->send($order->buyer_id, 'order', 'Pesanan dikirim', "Pesanan {$order->order_code} dikirim lewat {$order->courier}, resi {$order->tracking_number}. Konfirmasi setelah barang diterima.", $order);
+        DB::transaction(function () use ($order, $courier, $tracking) {
+            $order = CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            Fail::unless($order->isCourier(), 'Pesanan ini diambil di booth, bukan dikirim kurir.');
+            Fail::unless($this->isReadyToShip($order), 'Pesanan belum siap dikirim (belum lunas / produksi belum selesai).');
+            Fail::unless(! $order->shipping_deadline || now()->lt($order->shipping_deadline), 'Tenggat kirim telah lewat; tunggu proses sistem.');
+            $order->update(['order_status' => 'shipped', 'courier' => mb_substr($courier, 0, 40), 'tracking_number' => mb_substr($tracking, 0, 60)]);
+            $this->notify->send($order->buyer_id, 'order', 'Pesanan dikirim', "Pesanan {$order->order_code} dikirim lewat {$order->courier}, resi {$order->tracking_number}. Konfirmasi setelah barang diterima.", $order);
+        });
     }
 
     public function readyForPickup(CustomerOrder $order): EventPickup
@@ -484,6 +497,9 @@ class OrderService
             if ($order->order_status === 'completed') {
                 return;
             }
+
+            // Validasi ulang setelah lock agar pesanan batal tidak menjadi selesai.
+            Fail::unless(in_array($order->order_status, ['shipped', 'ready_for_pickup'], true), 'Status pesanan sudah berubah; tidak dapat diselesaikan.');
 
             $order->update(['order_status' => 'completed', 'completed_at' => now()]);
             $this->balance->release($order);

@@ -18,6 +18,18 @@
                     <p class="text-sm text-ink-500">Menunggu pembeli membayar.</p>
                 @endif
 
+                @if ($o->order_type === 'custom' && in_array($o->order_status, ['paid','awaiting_production','in_production'], true))
+                    <div class="space-y-2 rounded-xl border p-3">
+                        <p class="text-sm">Estimasi custom: {{ $o->custom_estimate_at?->translatedFormat('d M Y H:i') ?? 'Belum tersedia untuk pesanan lama' }}</p>
+                        @if (app(\App\Services\CustomDelayService::class)->isPending($o))<p class="ms-hint text-amber-700">Terlambat: beri estimasi baru dan alasan; tunggu pilihan pembeli.</p>@endif
+                        <label class="ms-label">Tanggal estimasi baru</label><input type="date" wire:model="customEstimateDate" class="ms-input">
+                        @error('customEstimateDate')<p class="ms-error">{{ $message }}</p>@enderror
+                        <textarea wire:model="customEstimateReason" class="ms-input" placeholder="Alasan perubahan estimasi (wajib)"></textarea>
+                        @error('customEstimateReason')<p class="ms-error">{{ $message }}</p>@enderror
+                        <button type="button" wire:click="reviseCustomEstimate" class="ms-btn-soft w-full">Simpan estimasi & beri tahu pembeli</button>
+                    </div>
+                @endif
+
                 {{-- Produksi (PO & custom) --}}
                 @if (in_array($o->order_type, ['pre_order', 'custom'], true))
                     @if ($o->order_type === 'pre_order' && $o->order_status === 'paid')
@@ -72,7 +84,7 @@
                     @error('note')<p class="ms-error">{{ $message }}</p>@enderror
                     <div class="flex gap-2">
                         <button type="button" wire:click="decideCancel({{ $openCase->id }}, false)" class="ms-btn-ghost flex-1">Tolak</button>
-                        <button type="button" wire:click="decideCancel({{ $openCase->id }}, true)" wire:confirm="Setujui pembatalan? Dana dikembalikan ke pembeli." class="ms-btn-danger flex-1">Setujui</button>
+                        <button type="button" wire:click="decideCancel({{ $openCase->id }}, true)" wire:confirm="Setujui pembatalan? Refund pembeli diproses." class="ms-btn-danger flex-1">Setujui</button>
                     </div>
                 </section>
             @endif
@@ -130,11 +142,11 @@
             @endif
 
             {{-- Batalkan oleh artis --}}
-            @if ($canCancel)
+            @if ($canCancel && ! app(\App\Services\CustomDelayService::class)->isPending($o))
                 <section class="ms-card space-y-2 p-5" x-data="{ open: false }">
                     <button type="button" class="text-sm font-bold text-red-600" @click="open = !open">Batalkan pesanan (oleh artis)</button>
                     <div x-show="open" x-cloak class="space-y-2">
-                        <p class="ms-hint">Dana dikembalikan penuh ke pembeli dan rating tokomu terkena penalti pembatalan.</p>
+                        <p class="ms-hint">Refund penuh diproses ke pembeli dan rating tokomu terkena penalti pembatalan.</p>
                         <textarea wire:model="cancelReason" rows="2" class="ms-input" placeholder="Alasan"></textarea>
                         @error('cancelReason')<p class="ms-error">{{ $message }}</p>@enderror
                         <button type="button" wire:click="cancelByArtist" wire:confirm="Yakin membatalkan pesanan ini?" class="ms-btn-danger w-full">Batalkan</button>

@@ -20,6 +20,32 @@ class Batches extends Component
 {
     use RunsActions;
 
+    public ?int $editingEstimateId = null;
+    public string $estimateMonth = '';
+    public string $estimateReason = '';
+
+    public function editEstimate(int $id): void
+    {
+        $batch = $this->batch($id);
+        $this->editingEstimateId = $batch->id;
+        $this->estimateMonth = $batch->estimated_month?->format('Y-m') ?? today()->format('Y-m');
+        $this->estimateReason = '';
+        $this->resetErrorBag();
+    }
+
+    public function saveEstimate(): void
+    {
+        $this->validate(['estimateMonth' => 'required|date_format:Y-m', 'estimateReason' => 'required|string|min:10|max:1000']);
+        $result = $this->attempt(function () {
+            app(PoService::class)->changeEstimate($this->batch($this->editingEstimateId), $this->estimateMonth, $this->estimateReason);
+            return true;
+        });
+        if ($result) {
+            $this->editingEstimateId = null;
+            $this->dispatch('toast', message: 'Estimasi diubah dan pembeli diberi notifikasi.');
+        }
+    }
+
     private function batch(int $id): PoBatch
     {
         return PoBatch::whereHas('product', fn ($q) => $q->where('artist_profile_id', Auth::user()->artistProfile->id))->findOrFail($id);
@@ -29,7 +55,7 @@ class Batches extends Component
     {
         $r = $this->attempt(fn () => app(PoService::class)->closeNow($this->batch($id)));
         if ($r) {
-            $this->dispatch('toast', message: $r['reached'] ? "PO ditutup ({$r['total']} pcs) — target tercapai." : "PO ditutup tapi target tidak tercapai ({$r['total']} pcs) — pembeli direfund otomatis.", tone: $r['reached'] ? 'ok' : 'error');
+            $this->dispatch('toast', message: $r['reached'] ? "PO ditutup ({$r['total']} pcs) — target tercapai." : "PO ditutup tapi target tidak tercapai ({$r['total']} pcs) — refund pembeli diproses.", tone: $r['reached'] ? 'ok' : 'error');
         }
     }
 

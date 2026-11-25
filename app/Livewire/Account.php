@@ -4,6 +4,8 @@ namespace App\Livewire;
 
 use App\Models\Address;
 use App\Models\ArtistProfile;
+use App\Models\ArtistApplication;
+use App\Services\NotificationService;
 use App\Models\Fandom;
 use App\Models\FileUpload;
 use App\Models\Product;
@@ -78,6 +80,7 @@ class Account extends Component
     // toko
     public string $shop_name = '';
     public string $shop_description = '';
+    public string $social_url = '';
     public string $bank_name = '';
     public string $bank_account_number = '';
     // alamat toko (asal pengiriman) — diisi sendiri, terpisah dari buku alamat pembeli
@@ -581,6 +584,7 @@ class Account extends Component
         $data = $this->validate([
             'shop_name'           => ['required', 'string', 'min:3', 'max:100', Rule::unique('artist_profile', 'shop_name')->ignore($user->artistProfile?->id)],
             'shop_description'    => ['nullable', 'string', 'max:1000'],
+            'social_url'          => [$user->artistProfile ? 'nullable' : 'required', 'url:http,https', 'max:500'],
             'bank_name'           => ['nullable', 'string', 'max:50'],
             'bank_account_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9\-\s]{5,30}$/'],
             'shop_address'        => ['required', 'string', 'min:10', 'max:500'],
@@ -614,20 +618,29 @@ class Account extends Component
             return;
         }
 
-        DB::transaction(function () use ($user, $values, $saveAddress) {
-            $saveAddress();
-            ArtistProfile::create($values + ['user_id' => $user->id, 'available_balance' => 0, 'held_balance' => 0, 'rating' => 0, 'rating_count' => 0]);
-            $user->update(['role' => 'artist']);
+        DB::transaction(function () use ($user, $values, $data, $province) {
+            $user = \App\Models\User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_if($user->artistProfile()->exists(), 422);
+            $application = ArtistApplication::where('user_id', $user->id)->lockForUpdate()->first();
+            if ($application?->status === 'pending') {
+                \App\Support\Fail::because('Pengajuan toko masih menunggu admin.');
+            }
+            $payload = $values + ['user_id'=>$user->id, 'social_url'=>$data['social_url'],
+                'shop_address'=>$data['shop_address'], 'shop_city_id'=>$data['shop_city_id'],
+                'shop_province'=>mb_substr($province ?: '-', 0, 80), 'shop_postal_code'=>$data['shop_postal_code'] ?: null,
+                'status'=>'pending', 'reviewed_by'=>null, 'reviewed_at'=>null, 'review_note'=>null];
+            if ($application) $application->update($payload); else ArtistApplication::create($payload);
+            app(NotificationService::class)->toAdmins('order', 'Pengajuan toko artis', "{$user->name} mengajukan toko {$values['shop_name']}. Periksa identitas dan akun media sosial di Admin → Pengguna.");
         });
+        $this->dispatch('toast', message: 'Pengajuan terkirim. Toko aktif setelah disetujui admin.');
 
-        session()->flash('status', 'Toko dibuka! Selamat datang di Studio artis.');
-        $this->redirectRoute('studio.dashboard', navigate: false);
     }
 
     public function render()
     {
         return view('livewire.account', [
             'shopBanner' => $this->shopBanner(Auth::user()->artistProfile),
+            'shopApplication' => ArtistApplication::where('user_id', Auth::id())->first(),
         ]);
     }
 }

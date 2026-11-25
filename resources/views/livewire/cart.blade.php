@@ -81,6 +81,9 @@
                                             <p class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">
                                                 <x-icon name="info" class="h-3.5 w-3.5" /> {{ $item->unavailable }}
                                             </p>
+                                            @if ($item->max > 0 && $item->quantity > $item->max)
+                                                <button type="button" wire:click="adjustToAvailable({{ $item->id }})" class="ms-link ml-2 text-xs">Sesuaikan jadi {{ $item->max }} pcs</button>
+                                            @endif
                                         @endif
 
                                         <div class="mt-2.5 flex flex-wrap items-center justify-between gap-3">

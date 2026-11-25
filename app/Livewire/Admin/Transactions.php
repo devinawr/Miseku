@@ -84,7 +84,7 @@ class Transactions extends Component
                 ->when($this->q, fn ($w) => $w->where('midtrans_order_id', 'like', "%{$this->q}%"))
                 ->latest('created_at')->latest('id')->paginate(20);
         } else {
-            $data['refunds'] = Payment::with('order.buyer', 'order.artistProfile')->where('payment_type', 'refund')
+            $data['refunds'] = Payment::with('order.buyer', 'order.artistProfile', 'refundBankAccount')->where('payment_type', 'refund')
                 ->orderByRaw("payment_status = 'pending' DESC")->latest('created_at')->latest('id')->paginate(20);
         }
 

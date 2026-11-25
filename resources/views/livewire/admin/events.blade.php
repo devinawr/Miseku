@@ -14,6 +14,21 @@
         </form>
     @endif
 
+    @if ($proposals->isNotEmpty())
+        <h2 class="ms-section-title mb-3">Usulan event menunggu persetujuan</h2>
+        <div class="mb-6 space-y-3">
+            @foreach ($proposals as $proposal)
+                <div class="ms-card space-y-2 p-5" wire:key="proposal-{{ $proposal->id }}">
+                    <p class="font-bold">{{ $proposal->event_name }} · {{ $proposal->artistProfile->shop_name }}</p>
+                    <p class="text-sm">{{ $proposal->location }} · {{ $proposal->start_date->format('d M Y') }} – {{ $proposal->end_date->format('d M Y') }}</p>
+                    <input wire:model="proposalNotes.{{ $proposal->id }}" class="ms-input" placeholder="Alasan penolakan (wajib jika ditolak)">
+                    @error('proposalNotes.' . $proposal->id)<p class="ms-error">{{ $message }}</p>@enderror
+                    <button type="button" wire:click="decideProposal({{ $proposal->id }}, true)" class="ms-btn-primary">Setujui</button>
+                    <button type="button" wire:click="decideProposal({{ $proposal->id }}, false)" class="ms-btn-ghost">Tolak</button>
+                </div>
+            @endforeach
+        </div>
+    @endif
     <div class="space-y-3">
         @forelse ($events as $e)
             <div class="ms-card p-5" wire:key="ae-{{ $e->id }}">

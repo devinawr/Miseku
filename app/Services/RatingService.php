@@ -61,7 +61,7 @@ class RatingService
         $agg = Review::where('reviewee_id', $userId)->where('direction', 'artist_to_buyer')->selectRaw('AVG(rating) a, COUNT(*) c')->first();
         $set = PlatformSetting::current();
 
-        $voluntary = Cancellation::where('requester_id', $userId)->where('cancellation_type', 'voluntary')->where('cancellation_status', 'approved')
+        $voluntary = Cancellation::where('requester_id', $userId)->where('cancellation_type', 'voluntary')->where('cancellation_status', 'approved')->where('penalty_exempt', false)
             ->whereHas('order', fn ($q) => $q->where('buyer_id', $userId))->count();
         $timeouts = Cancellation::where('cancellation_type', 'settlement_timeout')->whereHas('order', fn ($q) => $q->where('buyer_id', $userId))->count();
 
@@ -86,7 +86,7 @@ class RatingService
             return ['voluntary' => $v, 'timeout' => $s, 'total' => round($v * $set->penalty_voluntary + $s * $set->penalty_shipping_timeout, 2)];
         }
 
-        $v = Cancellation::where('requester_id', $buyer->id)->where('cancellation_type', 'voluntary')->where('cancellation_status', 'approved')
+        $v = Cancellation::where('requester_id', $buyer->id)->where('cancellation_type', 'voluntary')->where('cancellation_status', 'approved')->where('penalty_exempt', false)
             ->whereHas('order', fn ($q) => $q->where('buyer_id', $buyer->id))->count();
         $s = Cancellation::where('cancellation_type', 'settlement_timeout')->whereHas('order', fn ($q) => $q->where('buyer_id', $buyer->id))->count();
 
@@ -99,7 +99,7 @@ class RatingService
             ->whereHas('order', fn ($o) => $o->where('artist_profile_id', $artist->id));
 
         if ($type === 'voluntary') {
-            $q->where('cancellation_status', 'approved')->where('requester_id', $artist->user_id);
+            $q->where('cancellation_status', 'approved')->where('penalty_exempt', false)->where('requester_id', $artist->user_id);
         }
 
         return $q->count();

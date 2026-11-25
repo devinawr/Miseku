@@ -5,6 +5,8 @@ namespace App\Livewire\Studio;
 use App\Models\CustomerOrder;
 use App\Models\Event;
 use App\Models\EventBooth;
+use App\Models\EventProposal;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -20,6 +22,27 @@ use Livewire\Component;
 class Events extends Component
 {
     public ?int $editingEvent = null;
+    public bool $showProposal = false;
+    public string $proposalName = '';
+    public string $proposalLocation = '';
+    public string $proposalStart = '';
+    public string $proposalEnd = '';
+
+    public function proposeEvent(): void
+    {
+        $data = $this->validate([
+            'proposalName'=>'required|string|max:150', 'proposalLocation'=>'required|string|max:255',
+            'proposalStart'=>'required|date|after_or_equal:today', 'proposalEnd'=>'required|date|after_or_equal:proposalStart',
+        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            EventProposal::create(['artist_profile_id'=>Auth::user()->artistProfile->id, 'event_name'=>trim($data['proposalName']),
+                'location'=>trim($data['proposalLocation']), 'start_date'=>$data['proposalStart'], 'end_date'=>$data['proposalEnd'], 'status'=>'pending']);
+            app(NotificationService::class)->toAdmins('order', 'Usulan event baru', Auth::user()->artistProfile->shop_name . ' mengusulkan event ' . trim($data['proposalName']) . '. Periksa di Admin → Event.');
+        });
+        $this->reset('showProposal','proposalName','proposalLocation','proposalStart','proposalEnd');
+        $this->dispatch('toast', message: 'Usulan event dikirim ke admin.');
+    }
+
 
     public string $booth_number = '';
 
@@ -52,11 +75,24 @@ class Events extends Component
             'attend_days.*'   => 'in:' . implode(',', range(1, min(7, $event->duration_days))),
         ], [], ['attend_days' => 'hari hadir']);
 
-        EventBooth::updateOrCreate(
-            ['event_id' => $event->id, 'artist_profile_id' => Auth::user()->artistProfile->id],
-            ['booth_number' => $this->booth_number ?: null, 'operating_hours' => $this->operating_hours ?: null,
-                'attend_days' => collect($this->attend_days)->map(fn ($d) => (int) $d)->sort()->implode(',')]
-        );
+        \Illuminate\Support\Facades\DB::transaction(function () use ($event) {
+            $artist = \App\Models\ArtistProfile::whereKey(Auth::user()->artistProfile->id)->lockForUpdate()->firstOrFail();
+            $existing = EventBooth::where('event_id', $event->id)->where('artist_profile_id', $artist->id)->first();
+            EventBooth::updateOrCreate(
+                ['event_id' => $event->id, 'artist_profile_id' => $artist->id],
+                ['booth_number' => $this->booth_number ?: null, 'operating_hours' => $this->operating_hours ?: null,
+                    'attend_days' => collect($this->attend_days)->map(fn ($d) => (int) $d)->sort()->implode(',')]
+            );
+            if (! $existing) {
+                $buyerIds = CustomerOrder::where('artist_profile_id', $artist->id)->where('order_type', '!=', 'ots_event')
+                    ->whereNotIn('order_status', ['awaiting_payment', 'cancelled', 'failed'])->select('buyer_id');
+                \App\Models\User::whereIn('id', $buyerIds)->where('is_active', true)->where('id', '!=', $artist->user_id)
+                    ->orderBy('id')->chunkById(200, function ($users) use ($artist, $event) {
+                        foreach ($users as $user) app(NotificationService::class)->send($user, 'order', 'Artis membuka booth',
+                            "{$artist->shop_name} membuka booth di {$event->event_name} ({$event->period_label}). Lihat informasi event di Miseku.", null, false);
+                    });
+            }
+        });
 
         $this->editingEvent = null;
         $this->dispatch('toast', message: 'Booth tersimpan. Pembeli kini bisa memilih pick-up di event ini.');
@@ -86,6 +122,6 @@ class Events extends Component
             ->whereIn('event_booth_id', $booths->pluck('id'))->selectRaw('event_booth_id, order_status, COUNT(*) AS n')
             ->groupBy('event_booth_id', 'order_status')->get()->groupBy('event_booth_id');
 
-        return view('livewire.studio.events', compact('events', 'booths', 'pickups'));
+        return view('livewire.studio.events', compact('events', 'booths', 'pickups') + ['proposals' => EventProposal::where('artist_profile_id', $profileId)->latest('id')->take(10)->get()]);
     }
 }

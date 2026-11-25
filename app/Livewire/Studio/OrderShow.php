@@ -31,6 +31,10 @@ class OrderShow extends Component
 
     public string $cancelReason = '';
 
+    public string $customEstimateDate = '';
+
+    public string $customEstimateReason = '';
+
     public int $buyerRating = 5;
 
     public string $buyerComment = '';
@@ -53,6 +57,13 @@ class OrderShow extends Component
     {
         $this->order = $this->order->fresh();
         $this->reset('note', 'cancelReason');
+    }
+
+    public function reviseCustomEstimate(): void
+    {
+        $this->validate(['customEstimateDate' => 'required|date_format:Y-m-d', 'customEstimateReason' => 'required|string|min:10|max:1000']);
+        $this->attempt(fn () => app(\App\Services\CustomDelayService::class)->revise($this->order, Auth::user(), $this->customEstimateDate, $this->customEstimateReason), 'Estimasi diubah dan pembeli diberi notifikasi.');
+        $this->order = $this->order->fresh();
     }
 
     public function production(string $status): void
@@ -83,7 +94,7 @@ class OrderShow extends Component
     public function cancelByArtist(): void
     {
         $this->validate(['cancelReason' => 'required|string|min:5|max:500'], [], ['cancelReason' => 'alasan']);
-        $this->attempt(fn () => app(CancellationService::class)->cancelByArtist($this->order, Auth::user(), $this->cancelReason), 'Pesanan dibatalkan & dana dikembalikan ke pembeli.');
+        $this->attempt(fn () => app(CancellationService::class)->cancelByArtist($this->order, Auth::user(), $this->cancelReason), 'Pesanan dibatalkan & refund pembeli diproses.');
         $this->done();
     }
 
@@ -95,7 +106,7 @@ class OrderShow extends Component
         }
         $this->attempt(fn () => $approve
             ? app(CancellationService::class)->approve($case, Auth::user(), $this->note ?: null)
-            : app(CancellationService::class)->reject($case, Auth::user(), $this->note), $approve ? 'Pembatalan disetujui, dana dikembalikan.' : 'Pengajuan ditolak.');
+            : app(CancellationService::class)->reject($case, Auth::user(), $this->note), $approve ? 'Pembatalan disetujui, refund diproses.' : 'Pengajuan ditolak.');
         $this->done();
     }
 

@@ -423,9 +423,6 @@ class ProductForm extends Component
         $waiting = $product->unapprovedMasters();
 
         if ($isNew && $product->product_status === 'active') {
-            if ($option = $this->designOption) {
-                app(PollService::class)->announcePo($option, $product);
-            }
             if (! $waiting) {
                 app(NotificationService::class)->announceNewProduct($product);
             }
