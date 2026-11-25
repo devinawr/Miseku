@@ -35,7 +35,13 @@ class Batches extends Component
 
     public function saveEstimate(): void
     {
-        $this->validate(['estimateMonth' => 'required|date_format:Y-m', 'estimateReason' => 'required|string|min:10|max:1000']);
+        $this->validate(
+            ['estimateMonth' => 'required|date_format:Y-m', 'estimateReason' => 'required|string|min:10|max:1000'],
+            [
+                'estimateMonth.required' => 'Bulan dan tahun estimasi wajib diisi.',
+                'estimateMonth.date_format' => 'Pilih bulan dan tahun yang valid, misalnya 2027-02.',
+            ]
+        );
         $result = $this->attempt(function () {
             app(PoService::class)->changeEstimate($this->batch($this->editingEstimateId), $this->estimateMonth, $this->estimateReason);
             return true;

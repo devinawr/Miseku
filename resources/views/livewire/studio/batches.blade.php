@@ -40,7 +40,8 @@
                 @endif
                 @if ($editingEstimateId === $b->id)
                     <div class="mt-4 space-y-3 border-t pt-4">
-                        <label class="block"><span class="ms-label">Bulan estimasi baru</span><input type="month" wire:model="estimateMonth" class="ms-input"></label>
+                        <label class="block"><span class="ms-label">Bulan dan tahun estimasi baru (wajib)</span><input type="month" min="{{ now()->format('Y-m') }}" wire:model="estimateMonth" class="ms-input" required></label>
+                        <p class="ms-hint">Pilih bulan dan tahun, contohnya Februari 2027.</p>
                         @error('estimateMonth') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
                         <label class="block"><span class="ms-label">Alasan perubahan (wajib)</span><textarea wire:model="estimateReason" class="ms-input" maxlength="1000"></textarea></label>
                         @error('estimateReason') <p class="text-sm text-red-600">{{ $message }}</p> @enderror

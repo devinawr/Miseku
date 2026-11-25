@@ -49,6 +49,10 @@
             {{ $product->character?->character_name }} · {{ $product->merchandiseType?->type_name }}
         </p>
 
+        @if ($product->is_pre_order && $product->openBatch?->estimated_month)
+            <p class="mt-1.5 text-xs font-medium text-ink-500">Estimasi jadi: {{ $product->openBatch->estimated_month->translatedFormat('F Y') }}</p>
+        @endif
+
         <div class="mt-auto pt-3">
             <x-rupiah :value="$product->display_price" class="text-base font-extrabold text-ink-900" />
             @if ($product->is_pre_order && $product->openBatch?->is_dp)

@@ -249,8 +249,9 @@
                             @error('closes_at') <p class="ms-error">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="estimated_month" class="ms-label">Estimasi barang jadi</label>
-                            <input id="estimated_month" type="month" min="{{ now()->format('Y-m') }}" wire:model.blur="estimated_month" class="ms-input">
+                            <label for="estimated_month" class="ms-label">Estimasi barang jadi (bulan dan tahun) <span class="text-red-600">*</span></label>
+                            <input id="estimated_month" type="month" min="{{ now()->format('Y-m') }}" wire:model.blur="estimated_month" class="ms-input" required aria-describedby="estimated-month-hint">
+                            <p id="estimated-month-hint" class="ms-hint">Pilih bulan dan tahun, contohnya Februari 2027.</p>
                             @error('estimated_month') <p class="ms-error">{{ $message }}</p> @enderror
                         </div>
                         <div>

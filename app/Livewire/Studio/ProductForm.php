@@ -391,6 +391,8 @@ class ProductForm extends Component
     protected function messages(): array
     {
         return [
+            'estimated_month.required' => 'Bulan dan tahun estimasi barang jadi wajib diisi.',
+            'estimated_month.date_format' => 'Pilih bulan dan tahun estimasi yang valid, misalnya 2027-02.',
             'dp_amount.lt' => 'Nominal DP harus lebih kecil dari harga.',
             'max_slot.gte' => 'Kuota pcs tidak boleh lebih kecil dari minimum produksi.',
         ];
